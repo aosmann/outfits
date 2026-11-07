@@ -20,6 +20,7 @@
     --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  [hidden]{display:none!important}
   html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,-apple-system,system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
   button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
   input{font:inherit}
@@ -61,6 +62,10 @@
   .seg.mode{margin:0 0 10px}
   .seg.mode button{flex:1}
   .stage .ph small{display:block;margin-top:8px;font-size:12px}
+  .ph .btn{margin:16px auto 0;width:100%;max-width:240px;flex:none}
+  .ph .steps{text-align:left;margin:14px auto 0;padding-left:18px;font-size:13px;max-width:240px}
+  .ph .steps li{margin:3px 0}
+  .ph .link{margin-top:12px;font-size:12px;text-decoration:underline;text-underline-offset:3px;color:var(--muted)}
 
   /* carousels */
   .row{margin-bottom:14px}
@@ -190,8 +195,8 @@
       </div>
     </div>
     <div class="card">
-      <h3>Gemini API key</h3>
-      <p>Only needed for “On me” try-ons. Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>. Gemini's image model has no free tier, so turn on billing there (a few cents per look; each look is saved, so you pay once per outfit). The key stays on this device only.</p>
+      <h3>Gemini API key <span style="font-weight:500;color:var(--muted)">(optional)</span></h3>
+      <p>Not needed if you use the free Gemini app. Only for one-tap try-ons inside this app. Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>. Gemini's image model has no free tier, so turn on billing there (a few cents per look; each look is saved, so you pay once per outfit). The key stays on this device only.</p>
       <input class="field" id="keyInput" type="password" placeholder="Paste key (AIza…)" autocomplete="off">
       <input class="field" id="modelInput" placeholder="gemini-2.5-flash-image" autocomplete="off" spellcheck="false">
       <button class="btn primary" id="btnSaveKey" style="width:100%">Save</button>
@@ -211,6 +216,7 @@
   <button data-v="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Me</button>
 </nav>
 
+<input type="file" accept="image/*" id="resultInput" hidden>
 <div class="scrim" id="scrim"><div class="sheet" id="sheet"></div></div>
 <div class="toast" id="toast"></div>
 
@@ -386,6 +392,84 @@ async function dropLooksWith(id, silent){
   if(!silent) renderAll();
 }
 
+/* ---------- Gemini app (free, manual) ---------- */
+const APP_PROMPT = `In this image, the person is on the left. On the right are a TOP, a BOTTOM and SHOES.
+Create a realistic full-body photo of the SAME person (identical face, hair, skin tone and body shape) wearing exactly these three items, with the same colors, patterns and details. Remove their current outfit and add nothing else.
+Full body from head to feet with both shoes visible, relaxed standing pose facing the camera, plain light-grey studio background, soft lighting, portrait 3:4.`;
+let collage = {key:null, file:null, building:null};
+async function drawContain(g, blob, x, y, w, h, cover){
+  const im = await loadImg(blob); const iw=im.naturalWidth, ih=im.naturalHeight;
+  const sc = cover ? Math.max(w/iw,h/ih) : Math.min(w/iw,h/ih);
+  const dw=iw*sc, dh=ih*sc;
+  g.save(); g.beginPath(); g.rect(x,y,w,h); g.clip();
+  g.drawImage(im, x+(w-dw)/2, y+(h-dh)/2, dw, dh); g.restore();
+  URL.revokeObjectURL(im.src);
+}
+async function buildCollage(k){
+  const [t,b,s] = k.split('|').map(id=>items.find(i=>i.id===id));
+  const c=document.createElement('canvas'); c.width=1500; c.height=1200;
+  const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height);
+  await drawContain(g, me, 0, 0, 840, 1200, false);
+  g.fillStyle='#e5e5e5'; g.fillRect(860,0,4,1200);
+  const cells=[[t,'TOP'],[b,'BOTTOM'],[s,'SHOES']];
+  for(let i=0;i<3;i++){
+    const y=i*400;
+    await drawContain(g, shown(cells[i][0]), 900, y+50, 560, 330, false);
+    g.fillStyle='#111'; g.font='600 28px Inter, Helvetica, Arial, sans-serif'; g.fillText(cells[i][1], 900, y+38);
+  }
+  g.fillStyle='#111'; g.font='600 28px Inter, Helvetica, Arial, sans-serif'; g.fillText('PERSON', 20, 38);
+  const blob = await new Promise(r=>c.toBlob(r,'image/jpeg',0.92));
+  return new File([blob], 'outfit-for-gemini.jpg', {type:'image/jpeg'});
+}
+function ensureCollage(k){
+  if(!k || !me) return null;
+  if(collage.key===k && collage.file) return Promise.resolve(collage.file);
+  if(collage.key===k && collage.building) return collage.building;
+  collage = {key:k, file:null, building:null};
+  collage.building = buildCollage(k).then(f=>{ if(collage.key===k) collage.file=f; return f; });
+  return collage.building;
+}
+function sendToGeminiApp(){
+  const k=selKey(); if(!k) return;
+  if(!me){ toast('Add your full-body photo in the Me tab first.'); return switchView('settings'); }
+  if(collage.key!==k || !collage.file){ ensureCollage(k); return toast('Preparing the image… tap again in a second.'); }
+  try{ navigator.clipboard?.writeText(APP_PROMPT).catch(()=>{}); }catch{}
+  const file = collage.file;
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    navigator.share({files:[file], text:APP_PROMPT}).then(()=>{
+      toast('Prompt copied. In Gemini paste it, generate, then save the image.', 6000);
+    }).catch(()=>{});
+  } else {
+    const a=document.createElement('a'); a.href=URL.createObjectURL(file); a.download=file.name; document.body.append(a); a.click(); a.remove();
+    openSheet([ el('h3',{},'Open Gemini'),
+      el('p',{class:'msg'},'The outfit image was downloaded and the prompt copied. Open Gemini, attach the image, paste the prompt and generate. Save the result, then tap “Add Gemini result”.'),
+      el('div',{class:'stack'},
+        el('a',{class:'btn primary',href:'https://gemini.google.com/app',target:'_blank',rel:'noopener',style:'text-decoration:none'},'Open gemini.google.com'),
+        el('button',{class:'btn',onclick:()=>{ navigator.clipboard?.writeText(APP_PROMPT).then(()=>toast('Prompt copied')).catch(()=>{}); }},'Copy prompt again'),
+        el('button',{class:'btn',onclick:closeSheet},'Done')) ]);
+  }
+}
+let resultKey = null;
+function addGeminiResult(){
+  const k=selKey(); if(!k) return; resultKey=k; $('#resultInput').click();
+}
+$('#resultInput').addEventListener('change', async e=>{
+  const f=e.target.files[0]; e.target.value=''; const k=resultKey; resultKey=null;
+  if(!f || !k) return;
+  const [t,b,s]=k.split('|');
+  const look={key:k, image: await shrink(f,1400,0.92), created:Date.now(), top:t, bottom:b, shoes:s};
+  looks.set(k,look); await put('looks',look);
+  setMode('me'); renderLooks(); renderMe(); toast('Look saved for this outfit');
+});
+function redoSheet(){
+  openSheet([ el('h3',{},'Redo this look'),
+    el('div',{class:'stack'},
+      el('button',{class:'btn primary',onclick:()=>{ closeSheet(); sendToGeminiApp(); }},'Send to Gemini app (free)'),
+      el('button',{class:'btn',onclick:()=>{ closeSheet(); addGeminiResult(); }},'Add Gemini result'),
+      el('button',{class:'btn',onclick:()=>{ closeSheet(); tryOn(true); }},'Generate with API key (paid)'),
+      el('button',{class:'btn',onclick:closeSheet},'Cancel')) ]);
+}
+
 /* ---------- try-on ---------- */
 async function tryOn(force=false){
   const k = selKey();
@@ -467,20 +551,32 @@ function updateStage(){
     btn.textContent = look ? 'View on me' : '✦ Try on me'; btn.className='btn primary';
   } else if(look){
     img.src=url(look.image); img.hidden=false; chip.hidden=false; chip.textContent='✓ Saved look';
-    btn.textContent='↻ Regenerate'; btn.className='btn';
+    btn.textContent='↻ Redo'; btn.className='btn';
+  } else if(!me){
+    ph.hidden=false; ph.innerHTML = `<b>Add your photo</b>Put a full-body photo of yourself in the Me tab.`;
+    btn.textContent='Add my photo'; btn.className='btn primary';
   } else {
+    ensureCollage(k);
     ph.hidden=false;
-    ph.innerHTML = !me ? `<b>Add your photo</b>Put a full-body photo of yourself in the Me tab.`
-      : `<b>Not generated yet</b>See this outfit on you with Gemini.<small>Paid: a few cents, saved after the first time.</small>`;
-    btn.textContent='Generate on me'; btn.className='btn primary';
+    ph.innerHTML = `<b>Not on you yet</b>See this outfit on you with the free Gemini app.
+      <button class="btn primary" data-act="send">Send to Gemini app</button>
+      <ol class="steps"><li>Paste the copied prompt in Gemini</li><li>Save the image it makes</li><li>Tap “Add Gemini result” below</li></ol>
+      <button class="link" data-act="api">or generate with an API key (paid)</button>`;
+    btn.textContent='Add Gemini result'; btn.className='btn';
   }
   btn.disabled = isPending;
 }
 $('#btnTry').onclick = () => {
   const k = selKey(); if(!k) return;
-  if(mode==='flat'){ setMode('me'); if(!looks.has(k)) tryOn(); }
-  else tryOn(looks.has(k));
+  if(mode==='flat') return setMode('me');
+  if(!me) return switchView('settings');
+  if(looks.has(k)) return redoSheet();
+  addGeminiResult();
 };
+$('#stagePh').addEventListener('click', e=>{
+  const a=e.target.closest('[data-act]')?.dataset.act;
+  if(a==='send') sendToGeminiApp(); else if(a==='api') tryOn();
+});
 $('#btnShuffle').onclick = () => {
   for(const [c] of CATS){ const l=byCat(c); if(l.length) sel[c]=l[Math.floor(Math.random()*l.length)].id; }
   buildRows();
@@ -561,7 +657,7 @@ function renderMe(){
 }
 $('#meInput').addEventListener('change', async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
-  me = await shrink(f, 1400, 0.92); await put('meta', me, 'me'); renderMe(); updateStage();
+  me = await shrink(f, 1400, 0.92); await put('meta', me, 'me'); collage={key:null,file:null,building:null}; renderMe(); updateStage();
   if(looks.size && await ask('New photo saved','Your saved looks were made with your old photo. Delete them so they get regenerated with the new one?','Delete old looks')){
     for(const k of [...looks.keys()]) await del('looks',k); looks.clear(); renderAll();
   } else toast('Photo saved');
@@ -588,7 +684,7 @@ function switchView(v){
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>switchView(b.dataset.v));
 window.addEventListener('resize', ()=>{ if($('#view-outfit').classList.contains('on')) positionRows(); });
 
-function renderAll(){ if($('#view-outfit').classList.contains('on')) buildRows(); renderWardrobe(); renderLooks(); renderMe(); }
+function renderAll(){ collage={key:null,file:null,building:null}; if($('#view-outfit').classList.contains('on')) buildRows(); renderWardrobe(); renderLooks(); renderMe(); }
 
 /* ---------- boot ---------- */
 (async()=>{
