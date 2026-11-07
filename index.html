@@ -34,7 +34,7 @@
 
   /* stage */
   .stage{position:relative;background:var(--soft);border-radius:28px;aspect-ratio:3/4;max-height:50vh;margin:0 auto;width:100%;overflow:hidden;display:flex;align-items:center;justify-content:center}
-  .stage img{width:100%;height:100%;object-fit:cover;display:block}
+  #stageImg{width:100%;height:100%;object-fit:cover;display:block}
   .stage .ph{text-align:center;color:var(--muted);padding:28px;line-height:1.5;font-size:14px;max-width:280px}
   .stage .ph b{display:block;font-weight:700;font-size:20px;letter-spacing:-.02em;color:var(--ink);margin-bottom:6px}
   .chip{position:absolute;top:14px;left:14px;background:#fff;border-radius:99px;padding:6px 12px;font-size:12px;font-weight:600}
@@ -51,6 +51,16 @@
   .btn.danger{color:var(--danger)}
   .btn:disabled{opacity:.35}
   .btn.sm{height:38px;flex:none;padding:0 16px;font-size:14px}
+
+  .flat{position:absolute;inset:0;display:none}
+  .flat.on{display:block}
+  .flat img{position:absolute;left:50%;transform:translateX(-50%);object-fit:contain;mix-blend-mode:multiply}
+  .flat .f-top{top:3%;height:40%;width:82%}
+  .flat .f-bottom{top:39%;height:43%;width:72%}
+  .flat .f-shoes{bottom:3%;height:16%;width:46%}
+  .seg.mode{margin:0 0 10px}
+  .seg.mode button{flex:1}
+  .stage .ph small{display:block;margin-top:8px;font-size:12px}
 
   /* carousels */
   .row{margin-bottom:14px}
@@ -132,8 +142,10 @@
 <main>
   <!-- OUTFIT -->
   <section class="view on" id="view-outfit">
+    <div class="seg mode" id="modeSeg"><button data-m="flat" class="on">Flat lay</button><button data-m="me">On me</button></div>
     <div class="stage" id="stage">
       <div class="ph" id="stagePh"></div>
+      <div class="flat" id="flat"><img class="f-top" alt="Top"><img class="f-bottom" alt="Bottom"><img class="f-shoes" alt="Shoes"></div>
       <img id="stageImg" alt="" hidden>
       <span class="chip ok" id="stageChip" hidden>✓ Saved look</span>
       <div class="busy" id="stageBusy"><div class="spin"></div><div id="busyText">Dressing you up…</div></div>
@@ -155,7 +167,7 @@
       <label>+ Bottom<input type="file" accept="image/*" multiple data-cat="bottom"></label>
       <label>+ Shoes<input type="file" accept="image/*" multiple data-cat="shoes"></label>
     </div>
-    <p class="hint">New photos are sent to Gemini and turned into clean product shots on white. Tap an item to fix, move or delete it.</p>
+    <p class="hint">Backgrounds are removed right on your phone, free. The first time it downloads a small AI model (about 40 MB). Tap an item to fix, move or delete it.</p>
     <div class="grid" id="wardGrid"></div>
   </section>
 
@@ -179,7 +191,7 @@
     </div>
     <div class="card">
       <h3>Gemini API key</h3>
-      <p>Free from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> → “Create API key”. It stays on this device only.</p>
+      <p>Only needed for “On me” try-ons. Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>. Gemini's image model has no free tier, so turn on billing there (a few cents per look; each look is saved, so you pay once per outfit). The key stays on this device only.</p>
       <input class="field" id="keyInput" type="password" placeholder="Paste key (AIza…)" autocomplete="off">
       <input class="field" id="modelInput" placeholder="gemini-2.5-flash-image" autocomplete="off" spellcheck="false">
       <button class="btn primary" id="btnSaveKey" style="width:100%">Save</button>
@@ -242,6 +254,9 @@ let me = null;             // Blob
 const sel = {top:null,bottom:null,shoes:null};
 const pending = new Set(); // look keys being generated
 let wardFilter = 'all';
+let mode = 'flat';
+function setMode(m){ mode=m; document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===m)); updateStage(); }
+document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 
 const urlCache = new WeakMap();
 const url = blob => { if(!blob) return ''; let u=urlCache.get(blob); if(!u){u=URL.createObjectURL(blob);urlCache.set(blob,u);} return u; };
@@ -296,7 +311,8 @@ async function gemini(parts, aspect){
   if(r.status===400 && !/API key/i.test(j?.error?.message||'')) ({r,j} = await call(false));
   if(!r.ok){
     const m = j?.error?.message || `HTTP ${r.status}`;
-    if(r.status===429) throw new Error('Gemini free limit reached for now. Try again later.');
+    if(r.status===429 && /limit: ?0\b|free_tier/i.test(m)) throw new Error('Gemini image generation has no free tier. Turn on billing for your key in Google AI Studio, then try again.');
+    if(r.status===429) throw new Error('Gemini is busy or your quota is used up. Try again in a minute.');
     if(r.status===400 && /API key/i.test(m)) throw new Error('That API key was rejected. Check it in the Me tab.');
     if(r.status===403) throw new Error('Key not allowed for this model: '+m);
     throw new Error(m);
@@ -312,14 +328,6 @@ async function gemini(parts, aspect){
   return b64ToBlob(d.data, d.mimeType || d.mime_type || 'image/png');
 }
 
-const CAT_WORD = {top:'top / upper-body garment', bottom:'bottom (trousers, jeans, shorts or skirt)', shoes:'pair of shoes'};
-function productPrompt(cat){
-  return `Turn this photo into a clean e-commerce product photo of the ${CAT_WORD[cat]} only.
-- Isolate the item on a pure white (#FFFFFF) background. Remove any person, body, hanger, floor, furniture and clutter.
-- Show the item neatly from the front (ghost-mannequin or tidy flat-lay style${cat==='shoes'?'; show the pair at a slight three-quarter angle':''}), centered, filling most of the square frame.
-- Keep the item EXACTLY as it is: same colors, pattern, print, logos, texture, buttons, stitching and shape. Do not redesign or add anything.
-- Soft, even studio lighting with only a faint natural shadow under it.`;
-}
 const TRYON_PROMPT = `Create a realistic full-body photograph of the SAME person shown in the first image, now wearing exactly the three clothing items shown in the other images.
 Rules:
 - Keep the person's identity identical: same face, facial features, hair, skin tone, body shape and proportions. Do not beautify or change them.
@@ -328,6 +336,35 @@ Rules:
 - Full body visible from head to feet including both shoes, standing in a relaxed natural pose, facing the camera.
 - Plain light-grey studio background, soft even lighting, sharp photographic quality.`;
 
+/* on-device background removal */
+let bgLib = null, lastPct = -1;
+const getBg = () => bgLib ||= import('./bg.js');
+async function framed(cutBlob){
+  const img = await loadImg(cutBlob);
+  const W=img.naturalWidth, H=img.naturalHeight;
+  const sc = Math.min(1, 512/Math.max(W,H));
+  const a = document.createElement('canvas'); a.width=Math.max(1,Math.round(W*sc)); a.height=Math.max(1,Math.round(H*sc));
+  const ag=a.getContext('2d'); ag.drawImage(img,0,0,a.width,a.height);
+  const d = ag.getImageData(0,0,a.width,a.height).data;
+  let x0=a.width,y0=a.height,x1=-1,y1=-1;
+  for(let y=0;y<a.height;y++) for(let x=0;x<a.width;x++) if(d[(y*a.width+x)*4+3]>24){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+  if(x1<0) throw new Error('Could not find the item in that photo');
+  const bx=x0/sc, by=y0/sc, bw=(x1-x0+1)/sc, bh=(y1-y0+1)/sc;
+  const side = Math.min(1024, Math.round(Math.max(bw,bh)*1.12));
+  const k = side/(Math.max(bw,bh)*1.12);
+  const c=document.createElement('canvas'); c.width=c.height=side;
+  const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,side,side);
+  g.drawImage(img,bx,by,bw,bh,(side-bw*k)/2,(side-bh*k)/2,bw*k,bh*k);
+  URL.revokeObjectURL(img.src);
+  return new Promise(r=>c.toBlob(r,'image/jpeg',0.92));
+}
+async function productShot(blob){
+  const {removeBackground} = await getBg();
+  const cut = await removeBackground(blob, { model:'isnet_quint8', output:{format:'image/png'},
+    progress:(key)=>{ if(/fetch/.test(key) && lastPct<0){ lastPct=0; toast('Downloading background remover (one time, ~40 MB)…', 6000); } } });
+  return framed(cut);
+}
+
 /* cleanup queue */
 let queue = Promise.resolve();
 function queueCleanup(id){
@@ -335,11 +372,9 @@ function queueCleanup(id){
 }
 async function cleanup(id){
   const it = items.find(i=>i.id===id); if(!it) return;
-  if(!apiKey()){ it.status='raw'; await save(it); renderAll(); return; }
   it.status='work'; it.error=''; renderWardrobe();
   try{
-    const out = await gemini([{text:productPrompt(it.cat)}, await imgPart(it.original)], '1:1');
-    it.product = await shrink(out, 1024, 0.92); it.status='ok'; it.useOriginal=false;
+    it.product = await productShot(it.original); it.status='ok'; it.useOriginal=false;
     await dropLooksWith(it.id, true);
   }catch(e){ it.status='err'; it.error=e.message; toast(e.message, 4000); }
   await save(it); renderAll();
@@ -413,21 +448,39 @@ function positionRows(){
 }
 function updateStage(){
   const k = selKey(); const look = k && looks.get(k);
-  const img=$('#stageImg'), ph=$('#stagePh'), chip=$('#stageChip'), busy=$('#stageBusy'), btn=$('#btnTry');
-  busy.classList.toggle('on', !!(k && pending.has(k)));
+  const img=$('#stageImg'), ph=$('#stagePh'), chip=$('#stageChip'), busy=$('#stageBusy'), btn=$('#btnTry'), flat=$('#flat');
+  const isPending = !!(k && pending.has(k));
+  busy.classList.toggle('on', mode==='me' && isPending);
   $('#busyText').textContent = 'Styling you…\nusually 10–30 seconds';
-  if(look){ img.src=url(look.image); img.hidden=false; ph.hidden=true; chip.hidden=false; btn.textContent='↻ Regenerate'; btn.className='btn'; }
-  else{
-    img.hidden=true; chip.hidden=true; ph.hidden=false; btn.textContent='Show on me'; btn.className='btn primary';
+  img.hidden=true; chip.hidden=true; ph.hidden=true; flat.classList.remove('on');
+  if(!k){
     const missing = CATS.filter(([c])=>!byCat(c).length).map(([,l])=>l.toLowerCase());
-    ph.innerHTML = missing.length
-      ? `<b>Build your wardrobe</b>Add at least one ${missing.join(', ')} in the Wardrobe tab.`
-      : !me ? `<b>Add your photo</b>Put a full-body photo of yourself in the Me tab, then tap “Show on me”.`
-      : `<b>New combination</b>This outfit hasn't been generated yet.<br>Tap “Show on me”.`;
+    ph.hidden=false; ph.innerHTML = `<b>Build your wardrobe</b>Add at least one ${missing.join(', ')||'item'} in the Wardrobe tab.`;
+    btn.textContent='✦ Try on me'; btn.className='btn primary'; btn.disabled=true; return;
   }
-  btn.disabled = !k || pending.has(k);
+  if(mode==='flat'){
+    const [t,b,s] = CATS.map(([c])=>items.find(i=>i.id===sel[c]));
+    flat.querySelector('.f-top').src=url(shown(t)); flat.querySelector('.f-bottom').src=url(shown(b)); flat.querySelector('.f-shoes').src=url(shown(s));
+    flat.classList.add('on');
+    if(look){ chip.hidden=false; chip.textContent='✓ On-me look saved'; }
+    else if(isPending){ chip.hidden=false; chip.textContent='Generating on you…'; }
+    btn.textContent = look ? 'View on me' : '✦ Try on me'; btn.className='btn primary';
+  } else if(look){
+    img.src=url(look.image); img.hidden=false; chip.hidden=false; chip.textContent='✓ Saved look';
+    btn.textContent='↻ Regenerate'; btn.className='btn';
+  } else {
+    ph.hidden=false;
+    ph.innerHTML = !me ? `<b>Add your photo</b>Put a full-body photo of yourself in the Me tab.`
+      : `<b>Not generated yet</b>See this outfit on you with Gemini.<small>Paid: a few cents, saved after the first time.</small>`;
+    btn.textContent='Generate on me'; btn.className='btn primary';
+  }
+  btn.disabled = isPending;
 }
-$('#btnTry').onclick = () => tryOn(looks.has(selKey()));
+$('#btnTry').onclick = () => {
+  const k = selKey(); if(!k) return;
+  if(mode==='flat'){ setMode('me'); if(!looks.has(k)) tryOn(); }
+  else tryOn(looks.has(k));
+};
 $('#btnShuffle').onclick = () => {
   for(const [c] of CATS){ const l=byCat(c); if(l.length) sel[c]=l[Math.floor(Math.random()*l.length)].id; }
   buildRows();
@@ -451,12 +504,11 @@ document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>{
 document.querySelectorAll('.adds input').forEach(inp=>inp.addEventListener('change', async ()=>{
   const files=[...inp.files]; inp.value='';
   if(!files.length) return;
-  if(!apiKey()) toast('Saved. Add a Gemini key in Me to turn them into product shots.', 4000);
   for(const f of files){
     try{
-      const it = {id:uid(), cat:inp.dataset.cat, original: await shrink(f,1280,0.9), product:null, useOriginal:false, status:apiKey()?'work':'raw', error:'', created:Date.now()};
+      const it = {id:uid(), cat:inp.dataset.cat, original: await shrink(f,1280,0.9), product:null, useOriginal:false, status:'work', error:'', created:Date.now()};
       items.push(it); await save(it);
-      if(apiKey()) queueCleanup(it.id);
+      queueCleanup(it.id);
     }catch(e){ toast(e.message); }
   }
   renderAll();
@@ -477,7 +529,7 @@ function itemSheet(id){
     el('div',{class:'big'}, big), toggle,
     it.status==='err' ? el('p',{class:'msg'},'Last cleanup failed: '+it.error) : null,
     el('div',{class:'stack'},
-      el('button',{class:'btn accent',onclick:()=>{ closeSheet(); if(!apiKey()) return toast('Add your Gemini key in the Me tab first.'); it.status='work'; renderWardrobe(); queueCleanup(it.id); }}, it.product?'↻ Make product shot again':'✦ Make product shot'),
+      el('button',{class:'btn accent',onclick:()=>{ closeSheet(); it.status='work'; renderWardrobe(); queueCleanup(it.id); }}, it.product?'↻ Remove background again':'✦ Remove background'),
       it.product ? el('button',{class:'btn',onclick:async()=>{ it.useOriginal=!it.useOriginal; await save(it); await dropLooksWith(it.id,true); closeSheet(); renderAll(); }}, it.useOriginal?'Use the product shot':'Use my original photo instead') : null,
       el('p',{class:'msg',style:'margin:6px 2px 0'},'Category'), moveRow,
       el('button',{class:'btn danger',onclick:async()=>{
@@ -518,7 +570,6 @@ $('#keyInput').value = apiKey(); $('#modelInput').value = LS.get('op_model');
 $('#btnSaveKey').onclick = () => {
   LS.set('op_key', $('#keyInput').value.trim()); LS.set('op_model', $('#modelInput').value.trim());
   toast(apiKey() ? 'Saved' : 'Key cleared');
-  if(apiKey()) items.filter(i=>i.status==='raw').forEach(i=>{ i.status='work'; queueCleanup(i.id); });
   renderWardrobe();
 };
 $('#btnClearLooks').onclick = async () => {
@@ -548,7 +599,7 @@ function renderAll(){ if($('#view-outfit').classList.contains('on')) buildRows()
     me = (await get('meta','me')) || null;
     if(navigator.storage?.persist) navigator.storage.persist().catch(()=>{});
     // resume interrupted cleanups
-    items.filter(i=>i.status==='work').forEach(i=>queueCleanup(i.id));
+    items.filter(i=>i.status==='work'||i.status==='raw'||(i.status==='err'&&!i.product)).forEach(i=>queueCleanup(i.id));
   }catch(e){
     toast('Storage is not available in this browser, so nothing will be saved.', 5000);
   }
