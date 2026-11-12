@@ -26,4 +26,8 @@ There are two ways to turn it on:
 
 **Spending**: Me → Try-on shows an estimate for this month and all time, computed from Gemini's token usage at list price. Your exact bill is in Google AI Studio.
 
+**Versions**: Try again never replaces a photo. Every try-on of an outfit is kept, and you can switch between them with the ‹ › arrows or by swiping in full screen.
+
+**Backup**: Me → Storage → *Back up to a file* saves everything (clothes, looks, every try-on version, your photo) in one `.json` file. *Restore from a backup* adds it back on any device without deleting anything. Your API key isn't included. On iPhone, add the app to your Home Screen so Safari doesn't clear its data.
+
 To try a cheaper or newer image model, change `MODEL` in `wrangler.toml`, or the Model field in the app.
