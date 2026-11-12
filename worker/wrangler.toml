@@ -6,11 +6,13 @@ compatibility_date = "2025-06-01"
 ALLOWED_ORIGINS = "https://aosmann.github.io"
 MODEL = "gemini-2.5-flash-image"
 
-# Cloud sync + Claude connector storage. Create it once with:
-#   npx wrangler r2 bucket create outfits-data
-[[r2_buckets]]
-binding = "BUCKET"
-bucket_name = "outfits-data"
+# Cloud sync + Claude connector storage. To turn on:
+#   1. Enable R2 in the Cloudflare dashboard (R2 Object Storage)
+#   2. npx wrangler r2 bucket create outfits-data
+#   3. Uncomment the three lines below and run npx wrangler deploy
+# [[r2_buckets]]
+# binding = "BUCKET"
+# bucket_name = "outfits-data"
 
 # Optional per-IP rate limit (10 try-ons per minute per IP). Protects your Gemini bill
 # if the URL leaks. Uncomment to enable.

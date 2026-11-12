@@ -15,12 +15,11 @@ There are two ways to turn it on:
 1. **Built-in service** (recommended): deploy the Worker in `worker/`. The API key stays on the server.
    ```sh
    cd worker
-   npx wrangler r2 bucket create outfits-data  # storage for sync + Claude (free up to 10 GB)
    npx wrangler deploy
    npx wrangler secret put GEMINI_API_KEY      # key from aistudio.google.com/apikey, billing on
    npx wrangler secret put ACCESS_CODE         # optional; users enter it in Me → Try-on
    ```
-   Then set `BUILTIN_ENDPOINT` near the top of the script in `index.html` to the Worker URL (`https://outfits-tryon.<you>.workers.dev`). `ALLOWED_ORIGINS` in `wrangler.toml` limits which sites can call it. Uncomment the rate-limit block to cap requests at 10 per IP per minute.
+   For sync and Claude, also enable R2 in the Cloudflare dashboard, run `npx wrangler r2 bucket create outfits-data`, and uncomment the `[[r2_buckets]]` block in `wrangler.toml` before deploying. Then set `BUILTIN_ENDPOINT` near the top of the script in `index.html` to the Worker URL (`https://outfits-tryon.<you>.workers.dev`). `ALLOWED_ORIGINS` in `wrangler.toml` limits which sites can call it. Uncomment the rate-limit block to cap requests at 10 per IP per minute.
 2. **Your own key**: Me → Advanced → paste a Gemini API key. The browser calls Gemini directly.
 
 **Changing one piece** (for example only the shoes) edits your closest earlier try-on instead of starting over: the app sends that photo, your reference photo and only the new pieces. It costs the same per image, but your face and the rest of the outfit stay consistent, so fewer retries are needed. Use ••• → *Try on from scratch* to force a fresh photo.
