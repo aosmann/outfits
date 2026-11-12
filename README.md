@@ -15,6 +15,7 @@ There are two ways to turn it on:
 1. **Built-in service** (recommended): deploy the Worker in `worker/`. The API key stays on the server.
    ```sh
    cd worker
+   npx wrangler r2 bucket create outfits-data  # storage for sync + Claude (free up to 10 GB)
    npx wrangler deploy
    npx wrangler secret put GEMINI_API_KEY      # key from aistudio.google.com/apikey, billing on
    npx wrangler secret put ACCESS_CODE         # optional; users enter it in Me → Try-on
@@ -31,3 +32,17 @@ There are two ways to turn it on:
 **Backup**: Me → Storage → *Back up to a file* saves everything (clothes, looks, every try-on version, your photo) in one `.json` file. *Restore from a backup* adds it back on any device without deleting anything. Your API key isn't included. On iPhone, add the app to your Home Screen so Safari doesn't clear its data.
 
 To try a cheaper or newer image model, change `MODEL` in `wrangler.toml`, or the Model field in the app.
+
+## Sync and Claude
+
+With the Worker deployed, **Me → Sync & Claude → Turn on sync** keeps your clothes, looks, try-on photos and your photo in your own R2 bucket and syncs them between devices. Each device links with a private sync code (Use on another device / I have a sync code). Changes merge per item, and deletes sync too.
+
+**Connect to Claude** creates a private connector link (`https://<worker>/mcp/<token>`). In Claude, go to Settings → Connectors → Add custom connector and paste it. Claude can then:
+
+- `list_wardrobe`: see your clothes with small photos
+- `describe_item`: label an item (for example "navy wool sweater"); the label shows in the app
+- `list_looks`, `get_look`: read your saved looks and their try-on photos
+- `save_look`, `remove_look`: add or remove looks, which appear in the app after the next sync
+- `try_on`: make a try-on photo (about 4¢, only when you ask)
+
+Anyone with the link can use those tools, so keep it private. *Make a new link* revokes the old one.

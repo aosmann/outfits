@@ -189,6 +189,12 @@
   .status{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:10px}
   .status::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
   .status.ok::before{background:#2e9e5b}
+  .status.warn::before{background:#d97a1e}
+  .status.busy::before{background:#d9b21e;animation:blink 1s ease-in-out infinite}
+  @keyframes blink{50%{opacity:.3}}
+  .steps{margin:0 0 14px;padding-left:20px;color:var(--muted);font-size:14px;line-height:1.6}
+  .steps b{color:var(--ink)}
+  .field.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px}
   details{border-top:1px solid var(--line);margin-top:14px;padding-top:4px}
   summary{list-style:none;cursor:pointer;height:44px;display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:14px}
   summary::-webkit-details-marker{display:none}
@@ -330,6 +336,7 @@
       <ul class="tips"><li>Full body, head to feet in frame</li><li>Standing straight, facing the camera</li><li>Plain background, fitted clothes</li></ul>
     </div>
     <div class="card-s" id="genCard"></div>
+    <div class="card-s" id="syncCard"></div>
     <div class="card-s">
       <h2>Storage</h2>
       <p id="storageInfo">Everything is saved in this browser, on this device only.</p>
@@ -416,11 +423,23 @@ const tx = (store, mode, fn) => new Promise((res,rej)=>{
   t.oncomplete = () => res(out && 'result' in out ? out.result : undefined);
   t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
 });
-const put = (store,val,key) => tx(store,'readwrite',s=>s.put(val,key));
+const rawPut = (store,val,key) => tx(store,'readwrite',s=>s.put(val,key));
+const rawDel = (store,key) => tx(store,'readwrite',s=>s.delete(key));
 const get = (store,key) => tx(store,'readonly',s=>s.get(key));
 const getAll = store => tx(store,'readonly',s=>s.getAll());
-const del = (store,key) => tx(store,'readwrite',s=>s.delete(key));
-const LS = { get(k,d=''){ try{return localStorage.getItem(k)??d}catch{return d} }, set(k,v){ try{localStorage.setItem(k,v)}catch{} } };
+const LS = { get(k,d=''){ try{return localStorage.getItem(k)??d}catch{return d} }, set(k,v){ try{localStorage.setItem(k,v)}catch{} }, del(k){ try{localStorage.removeItem(k)}catch{} } };
+// Local changes get a timestamp (and deletions a tombstone) so cloud sync knows what is newer.
+const tombs = () => { try{ const t=JSON.parse(LS.get('op_tomb','{}')); return {items:t.items||{}, looks:t.looks||{}}; }catch{ return {items:{},looks:{}}; } };
+const put = (store,val,key) => {
+  if(store==='items'||store==='looks'){ val.updated=Math.max(Date.now(), (val.updated||0)+1); scheduleSync(); }
+  else if(store==='meta' && (key==='me'||key==='meId')){ LS.set('op_me_t', String(Date.now())); scheduleSync(); }
+  return rawPut(store,val,key);
+};
+const del = (store,key) => {
+  if(store==='items'||store==='looks'){ const t=tombs(); t[store][key]=Date.now(); LS.set('op_tomb', JSON.stringify(t)); scheduleSync(); }
+  else if(store==='meta' && key==='me'){ LS.set('op_me_t', String(Date.now())); scheduleSync(); }
+  return rawDel(store,key);
+};
 
 const cfg = {
   get key(){ return LS.get('op_key').trim(); },
@@ -471,7 +490,7 @@ async function addVersion(k, ids, ver){
 async function deleteVersion(k){
   const l=looks.get(k); if(!l) return;
   const snap={...l, versions:[...vers(l)]}, v=[...vers(l)], i=pickOf(l);
-  v.splice(i,1);
+  const gone=v.splice(i,1)[0]; l.vdel=[...(l.vdel||[]), gone.created];
   if(v.length){ l.versions=v; l.pick=Math.min(i, v.length-1); l.image=v[l.pick].image; l.meId=v[l.pick].meId; }
   else { l.versions=[]; l.pick=0; l.image=null; l.saved=true; }
   await putLook(l); renderAll();
@@ -1187,7 +1206,10 @@ function itemSheet(id){
       if(outfit.includes(id)) setOutfit(enforce(outfit));
       renderAll(); itemSheet(id); toast(`Moved to ${c.label.toLowerCase()}`);
     }}, c.one))),
-    el('div',{class:'stack',style:'margin-top:20px'},
+    el('p',{class:'sec-l'},'Description'),
+    el('input',{class:'field',placeholder:'e.g. navy wool sweater',value:it.desc||'',maxlength:'200',autocomplete:'off',
+      onchange:async e=>{ it.desc=e.target.value.trim(); await save(it); toast('Description saved'); }}),
+    el('div',{class:'stack',style:'margin-top:12px'},
       B(inO?'Remove from outfit':'Add to outfit', ()=>{ closeSheet(); if(inO) removePiece(id); else { addPiece(id); snack('Added to outfit','View',()=>switchView('outfit')); } }, inO?'':'primary', inO?'x':'plus'),
       it.status!=='work' ? B(it.product?'Remove background again':'Remove background', ()=>{ closeSheet(); it.status='work'; renderItemsOnly(); queueCleanup(id); }, '', 'spark') : null,
       B('Delete item', ()=>deleteItem(id), 'danger', 'trash')),
@@ -1312,6 +1334,7 @@ function renderMe(){
   $('#storageInfo').textContent = `${plural(items.length,'item')}, ${plural(lookList().length,'look')} and ${plural(imgs,'try-on photo')}, saved in this browser on this device only. Back up to keep a copy.`;
   $('#btnClearLooks').disabled = !imgs;
   $('#btnBackup').disabled = !items.length && !looks.size;
+  renderSyncCard();
   renderStorageTip();
   renderGenCard();
 }
@@ -1435,8 +1458,228 @@ function renderStorageTip(){
   $('#storageTip').replaceChildren(...lines.filter(Boolean).map(t=>el('p',{class:'tip'},t)));
 }
 
+/* ---------- cloud sync (Worker + R2) and the Claude connector ---------- */
+const SYNC = { get code(){ return LS.get('op_sync').trim(); }, get on(){ return !!(this.code && cfg.endpoint); } };
+let syncBusy=false, syncAgain=false, syncTimer=null, syncErr='', applying=false;
+const hashCache=new WeakMap(), thumbCache=new WeakMap();
+async function hashOf(blob){
+  let h=hashCache.get(blob);
+  if(!h){ const d=await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()); h=[...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,'0')).join(''); hashCache.set(blob,h); }
+  return h;
+}
+async function thumbOf(blob){ let t=thumbCache.get(blob); if(!t){ t=await shrink(blob,320,.8); thumbCache.set(blob,t); } return t; }
+const tsOf = r => (r && r.updated) || 0;
+async function syncFetch(path, opts={}, code=SYNC.code){
+  const r=await fetch(cfg.endpoint+path, {...opts, headers:{Authorization:'Bearer '+code, ...(opts.headers||{})}});
+  if(!r.ok){ const j=await r.json().catch(()=>({})); const e=new Error(j.error||`Sync failed (${r.status})`); e.status=r.status; throw e; }
+  return r;
+}
+const syncJSON = (path, body, code) => syncFetch(path, body===undefined ? {} : {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}, code).then(r=>r.json());
+function scheduleSync(ms=6000){ if(!SYNC.on || applying) return; clearTimeout(syncTimer); syncTimer=setTimeout(()=>syncNow(), ms); }
+
+async function syncNow(){
+  if(!SYNC.on) return;
+  if(syncBusy){ syncAgain=true; return; }
+  clearTimeout(syncTimer); syncBusy=true; syncErr=''; renderSyncStatus();
+  try{
+    const remote=await syncJSON('/sync/state');
+    remote.items=remote.items||{}; remote.looks=remote.looks||{};
+    const ch={items:{}, looks:{}}, up=new Map(), tomb=tombs();
+    const blob=async b=>{ if(!b) return null; const h=await hashOf(b); up.set(h,b); return h; };
+    for(const it of items){
+      const lu=it.updated||it.created||1;
+      if(lu<=tsOf(remote.items[it.id])) continue;
+      ch.items[it.id]={id:it.id, cat:it.cat, useOriginal:!!it.useOriginal, status:it.status, error:it.error||'', created:it.created, updated:lu, desc:it.desc||'',
+        ho:await blob(it.original), hp:await blob(it.product), ht:await blob(await thumbOf(shown(it)))};
+    }
+    for(const [id,t] of Object.entries(tomb.items)) if(!itemOf(id) && t>tsOf(remote.items[id])) ch.items[id]={id, deleted:true, updated:t};
+    for(const l of looks.values()){
+      const r=remote.looks[l.key], lu=l.updated||l.created||1, lv=vers(l), rv=new Set((r?.versions||[]).map(v=>v.created));
+      if(lu<=tsOf(r) && (r.deleted || lv.every(v=>rv.has(v.created)))) continue;
+      const v=[]; for(const x of lv) v.push({created:x.created, h:await blob(x.image), meId:x.meId||null, cost:x.cost||0, from:x.from||null, imported:!!x.imported, by:x.by||null});
+      ch.looks[l.key]={key:l.key, items:l.items, saved:!!l.saved, created:l.created, updated:lu, note:l.note||'', by:l.by||null, cost:l.cost||0,
+        versions:v, vdel:l.vdel||[], pickCreated:lv[pickOf(l)]?.created||null};
+    }
+    for(const [k,t] of Object.entries(tomb.looks)) if(!looks.has(k) && t>tsOf(remote.looks[k])) ch.looks[k]={key:k, deleted:true, updated:t};
+    const meT=+LS.get('op_me_t','0');
+    if(meT>tsOf(remote.me)) ch.me = me ? {h:await blob(me), meId, updated:meT} : {deleted:true, updated:meT};
+    const rs=new Set((remote.spend||[]).map(x=>x.t)), newSpend=spendLog().filter(x=>!rs.has(x.t));
+    if(newSpend.length) ch.spend=newSpend;
+
+    let state=remote;
+    if(Object.keys(ch.items).length || Object.keys(ch.looks).length || ch.me || ch.spend){
+      const hashes=[...up.keys()];
+      for(let i=0;i<hashes.length;i+=1000){
+        const {missing}=await syncJSON('/sync/missing',{hashes:hashes.slice(i,i+1000)});
+        for(const h of missing){ const b=up.get(h); await syncFetch('/sync/blob/'+h, {method:'PUT', headers:{'Content-Type':/^image\/(jpeg|png|webp)$/.test(b.type)?b.type:'image/jpeg'}, body:b}); }
+      }
+      state=await syncJSON('/sync/push', ch);
+    }
+    await applyRemote(state);
+    LS.set('op_sync_at', String(Date.now()));
+  }catch(e){
+    syncErr = e.status===401 ? 'This sync code isn’t recognised.' : e.status===501 ? 'The service doesn’t have sync set up yet.' : (e.message||'Sync failed');
+  }finally{
+    syncBusy=false; renderSyncStatus();
+    if(syncAgain){ syncAgain=false; scheduleSync(1500); }
+  }
+}
+async function applyRemote(state){
+  applying=true; let changed=false;
+  try{
+    const known=new Map(); let indexed=false;
+    const blobFor=async h=>{
+      if(!h) return null;
+      if(!indexed){ indexed=true;
+        const all=[me, ...items.flatMap(i=>[i.original,i.product]), ...[...looks.values()].flatMap(l=>vers(l).map(v=>v.image))].filter(Boolean);
+        for(const b of all) known.set(await hashOf(b), b); }
+      let b=known.get(h);
+      if(!b){ b=await (await syncFetch('/sync/blob/'+h)).blob(); known.set(h,b); hashCache.set(b,h); }
+      return b;
+    };
+    const tomb=tombs();
+    for(const [id,r] of Object.entries(state.items||{})){
+      const loc=itemOf(id), lu=loc ? (loc.updated||loc.created||1) : 0;
+      if(r.deleted){ if(loc && tsOf(r)>=lu){ await rawDel('items',id); items=items.filter(i=>i.id!==id); changed=true; } continue; }
+      if(loc ? tsOf(r)<=lu : (tomb.items[id]||0)>=tsOf(r)) continue;
+      const rec={id, cat:CAT[r.cat]?r.cat:'top', useOriginal:!!r.useOriginal, status:r.status||'ok', error:r.error||'', created:r.created||Date.now(), updated:tsOf(r), desc:r.desc||'',
+        original:await blobFor(r.ho), product:await blobFor(r.hp)};
+      if(!rec.original && !rec.product) continue;
+      if(loc) Object.assign(loc, rec); else items.push(rec);
+      await rawPut('items', loc||rec); changed=true;
+    }
+    for(const [k,r] of Object.entries(state.looks||{})){
+      const loc=looks.get(k), lu=loc ? (loc.updated||loc.created||1) : 0;
+      if(r.deleted){ if(loc && tsOf(r)>=lu){ await rawDel('looks',k); looks.delete(k); changed=true; } continue; }
+      if(loc ? tsOf(r)<=lu : (tomb.looks[k]||0)>=tsOf(r)) continue;
+      const v=[];
+      for(const x of r.versions||[]){ const b=await blobFor(x.h); if(b) v.push({image:b, created:x.created, meId:x.meId||null, cost:x.cost||0, from:x.from||null, imported:!!x.imported, by:x.by||null}); }
+      let pick=v.findIndex(x=>x.created===r.pickCreated); if(pick<0) pick=v.length-1; pick=Math.max(0,pick);
+      const rec={key:k, items:r.items||[], saved:r.saved!==false, created:r.created||Date.now(), updated:tsOf(r), note:r.note||'', by:r.by||null, cost:r.cost||0,
+        vdel:r.vdel||[], versions:v, pick, image:v[pick]?.image||null, meId:v[pick]?.meId||null};
+      await rawPut('looks', rec); looks.set(k, rec); changed=true;
+    }
+    const meT=+LS.get('op_me_t','0');
+    if(state.me && tsOf(state.me)>meT){
+      if(state.me.deleted){ await rawDel('meta','me'); await rawDel('meta','meId'); me=null; meId=null; }
+      else { const b=await blobFor(state.me.h); if(b){ await rawPut('meta',b,'me'); me=b; if(state.me.meId){ meId=state.me.meId; await rawPut('meta',meId,'meId'); } } }
+      LS.set('op_me_t', String(tsOf(state.me))); collageCache=null; changed=true;
+    }
+    if(Array.isArray(state.spend) && state.spend.length){
+      const log=spendLog(), seen=new Set(log.map(x=>x.t)), add=state.spend.filter(x=>x && x.t && !seen.has(x.t));
+      if(add.length){ LS.set('op_spend', JSON.stringify([...log, ...add].sort((a,b)=>a.t-b.t).slice(-2000))); changed=true; }
+    }
+  }finally{ applying=false; }
+  if(changed){
+    const o=enforce(outfit.filter(id=>itemOf(id)));
+    if(o.length!==outfit.length){ outfit=o; LS.set('op_outfit', JSON.stringify(o)); }
+    renderAll();
+  }
+}
+
+const agoShort = t => { const s=(Date.now()-t)/1000; return s<60?'just now':s<3600?`${Math.floor(s/60)} min ago`:s<86400?`${Math.floor(s/3600)} h ago`:ago(t); };
+function syncStatusText(){
+  if(syncBusy) return ['busy','Syncing…'];
+  if(syncErr) return ['warn','Sync problem: '+syncErr];
+  const t=+LS.get('op_sync_at','0');
+  return t ? ['ok','Synced '+agoShort(t)] : ['','Not synced yet'];
+}
+function renderSyncStatus(){
+  const st=$('#syncStatus'); if(!st) return;
+  const [c,t]=syncStatusText(); st.className='status '+c; st.textContent=t;
+}
+async function copyText(t, msg='Copied'){
+  try{ await navigator.clipboard.writeText(t); toast(msg); }
+  catch{ const i=el('textarea',{style:'position:fixed;opacity:0'}); i.value=t; document.body.append(i); i.select(); document.execCommand('copy'); i.remove(); toast(msg); }
+}
+function renderSyncCard(){
+  const card=$('#syncCard'); if(!card) return;
+  const h=el('h2',{},'Sync & Claude');
+  if(!cfg.endpoint){
+    card.replaceChildren(h, el('p',{},'Keep your wardrobe in the cloud, use it on your other devices, and ask Claude for outfits from it. This needs the built-in try-on service, so set that up first.'));
+    return;
+  }
+  if(!SYNC.code){
+    card.replaceChildren(h, el('p',{},'Back up your wardrobe automatically, use it on your other devices, and ask Claude for outfits from your own clothes.'),
+      el('div',{class:'stack'}, B('Turn on sync', enableSync, 'primary block', 'refresh'), B('I have a sync code', joinSheet, 'block')));
+    return;
+  }
+  const [c,t]=syncStatusText();
+  card.replaceChildren(h, el('div',{class:'status '+c, id:'syncStatus'}, t),
+    el('p',{},'Your clothes, looks and try-on photos sync automatically between your devices.'),
+    el('div',{class:'stack'},
+      B('Connect to Claude', connectSheet, 'primary block', 'spark'),
+      B('Sync now', ()=>syncNow(), 'block', 'refresh'),
+      B('Use on another device', codeSheet, 'block', 'copy'),
+      B('Turn off sync on this device', disableSync, 'danger block')));
+}
+async function enableSync(){
+  try{
+    const r=await fetch(cfg.endpoint+'/sync/new', {method:'POST', headers:cfg.code?{'X-Access-Code':cfg.code}:{}});
+    const j=await r.json().catch(()=>({}));
+    if(r.status===401) return toast('Sync needs the access code. Add it in the Try-on card above.', 4500);
+    if(!r.ok || !j.code) return toast(j.error || 'Couldn’t turn on sync. Try again.', 4500);
+    LS.set('op_sync', j.code); LS.del('op_sync_at'); renderMe(); toast('Sync is on. Uploading your wardrobe…', 3500);
+    syncNow();
+  }catch{ toast('Couldn’t reach the service. Check your connection.', 4000); }
+}
+function joinSheet(){
+  const inp=el('input',{class:'field mono',placeholder:'Paste your sync code',autocomplete:'off',autocapitalize:'off',spellcheck:'false'});
+  openSheet([el('p',{class:'msg'},'Find the code on your other device: Me → Sync & Claude → Use on another device. Your clothes on this device are kept and merged with the synced ones.'),
+    inp, el('div',{class:'stack',style:'margin-top:8px'}, B('Connect', async()=>{
+      const code=inp.value.trim(); if(!code) return;
+      try{ await syncJSON('/sync/state', undefined, code); }
+      catch(e){ return toast(e.status===401 ? 'That code isn’t recognised.' : 'Couldn’t reach the service.', 4000); }
+      LS.set('op_sync', code); LS.del('op_sync_at'); closeSheet(); renderMe(); toast('Connected. Syncing…'); syncNow();
+    }, 'primary'))], {title:'Use a sync code'});
+}
+function codeSheet(){
+  openSheet([el('p',{class:'msg'},'On your other phone or computer, open this app → Me → Sync & Claude → I have a sync code, and paste this:'),
+    el('input',{class:'field mono',value:SYNC.code,readonly:true,onclick:e=>e.target.select()}),
+    el('p',{class:'msg',style:'font-size:13px'},'Anyone with this code can see and change your wardrobe. Keep it private.'),
+    el('div',{class:'stack'}, B('Copy code', ()=>copyText(SYNC.code,'Sync code copied'), 'primary', 'copy'))], {title:'Use on another device'});
+}
+async function disableSync(){
+  if(!await ask('Turn off sync on this device?','Your wardrobe stays on this device and in the cloud. You can reconnect later with your sync code.','Turn off')) return;
+  LS.del('op_sync'); LS.del('op_sync_at'); LS.del('op_mcp_url'); syncErr=''; renderMe(); toast('Sync turned off on this device');
+}
+function connectSheet(){
+  const url=LS.get('op_mcp_url');
+  const make=async()=>{
+    try{ const {url}=await syncJSON('/sync/connector', {}); LS.set('op_mcp_url', url); connectSheet(); }
+    catch(e){ toast(e.message, 4000); }
+  };
+  const revoke=async()=>{
+    if(!await ask('Turn off Claude access?','The connector link stops working. You can make a new one any time.','Turn off')) return;
+    try{ await syncFetch('/sync/connector',{method:'DELETE'}); LS.del('op_mcp_url'); toast('Claude access turned off'); }
+    catch(e){ toast(e.message, 4000); }
+  };
+  if(!url){
+    openSheet([el('p',{class:'msg'},'Let Claude see your wardrobe, suggest outfits, save them to your Looks and make try-on photos when you ask. You’ll get a private link to add in Claude.'),
+      el('div',{class:'stack'}, B('Create connector link', make, 'primary', 'spark'))], {title:'Connect to Claude'});
+    return;
+  }
+  openSheet([
+    el('ol',{class:'steps'},
+      el('li',{}, el('b',{},'Copy the link'), ' below.'),
+      el('li',{}, 'In Claude (claude.ai or the app), open ', el('b',{},'Settings → Connectors → Add custom connector'), '.'),
+      el('li',{}, 'Name it ', el('b',{},'Outfits'), ', paste the link and add it.'),
+      el('li',{}, 'In a chat, ask “What should I wear today?”')),
+    el('input',{class:'field mono',value:url,readonly:true,onclick:e=>e.target.select()}),
+    el('p',{class:'msg',style:'font-size:13px'},'Anyone with this link can see your wardrobe and make try-ons, which cost money. Don’t share it. Looks Claude saves appear here after the next sync.'),
+    el('div',{class:'stack'},
+      B('Copy link', ()=>copyText(url,'Connector link copied'), 'primary', 'copy'),
+      B('Make a new link', async()=>{ if(await ask('Make a new link?','The old link stops working, so you’ll need to update it in Claude.','Make new link',false)) make(); }, '', 'refresh'),
+      B('Turn off Claude access', ()=>{ closeSheet(); revoke(); }, 'danger'))
+  ], {title:'Connect to Claude'});
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState==='visible' && SYNC.on && Date.now()-(+LS.get('op_sync_at','0'))>20000) syncNow();
+});
+setInterval(()=>{ if(document.visibilityState==='visible' && SYNC.on && !syncBusy) syncNow(); }, 90000);
+
 async function clearTryOns(){
-  for(const l of looks.values()) if(vers(l).length){ l.image=null; l.versions=[]; l.pick=0; await put('looks',l); }
+  for(const l of looks.values()) if(vers(l).length){ l.vdel=[...(l.vdel||[]), ...vers(l).map(v=>v.created)]; l.image=null; l.versions=[]; l.pick=0; await put('looks',l); }
   renderAll(); toast('Try-on photos deleted');
 }
 $('#btnClearLooks').onclick = async () => {
@@ -1482,6 +1725,7 @@ function renderAll(){ renderOutfit(); renderWardrobe(); renderLooks(); renderMe(
   if(looks.get(curKey())?.image) stageMode='me';
   if(!byCat(trayCat).length){ const c=CATS.find(c=>byCat(c.id).length); if(c) trayCat=c.id; }
   renderAll();
+  if(SYNC.on) syncNow();
   if(LS.get('op_restored')){ try{ localStorage.removeItem('op_restored'); }catch{} toast('Backup restored'); }
 })();
 })();
