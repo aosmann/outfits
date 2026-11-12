@@ -3,6 +3,12 @@
 // the prompt itself (so the endpoint can't be used as a general image generator)
 // and returns one generated image.
 //
+// Two request shapes:
+//   full try-on: { person, pieces:[{cat,image}] }
+//   edit:        { person, base, pieces:[{cat,image,replaces:[cat]}], remove:[cat] }
+//                edits an earlier try-on photo (base) so only the changed pieces are redrawn.
+// Responses include { usage:{in,out}, model } so the app can show what each try-on cost.
+//
 // Env:
 //   GEMINI_API_KEY  (secret, required)
 //   ACCESS_CODE     (secret, optional) — if set, requests must send X-Access-Code
@@ -34,6 +40,27 @@ Rules:
 - Replace the matching parts of their current outfit with these items. Keep any part of their current outfit that is not replaced. Do not add garments or accessories that are not listed.
 - Full body visible from head to feet, standing in a relaxed natural pose, facing the camera.
 - Plain light-grey studio background, soft even lighting, sharp photographic quality, portrait 3:4.`;
+}
+
+const NAME = { top: 'top', bottom: 'bottoms', dress: 'dress', outer: 'jacket or coat', shoes: 'shoes', bag: 'bag', acc: 'accessory' };
+
+function editPrompt(pieces, remove) {
+  const lines = [
+    ...pieces.map((p, i) => {
+      const n = i + 3, what = NAME[p.cat], rep = p.replaces || [];
+      return rep.length
+        ? `- Replace their ${rep.map(c => NAME[c]).join(' and ')} with the ${what} shown in image ${n}.`
+        : `- Add the ${what} shown in image ${n}${p.cat === 'outer' ? ', worn over the rest of the outfit' : ''}.`;
+    }),
+    ...remove.map(c => `- Remove their ${NAME[c]}.`),
+  ].join('\n');
+  return `Edit image 1, a photo of a person wearing an outfit. Make only these changes:
+${lines}
+Rules:
+- Keep everything else in image 1 exactly as it is: the same person, face, hair, skin tone, body shape, pose, framing, background, lighting and every other piece of clothing.
+- Image 2 is a reference photo of the same person. Use it only to keep their face and identity accurate.
+- Reproduce each new item's exact color, pattern, print, logos and details, with a natural, realistic fit.
+- Return the full edited photo, full body from head to feet, portrait 3:4.`;
 }
 
 function cors(req, env) {
@@ -87,19 +114,24 @@ export default {
     if (Number(req.headers.get('Content-Length') || 0) > 16_000_000) return json({ error: 'Request too large' }, 413, headers);
     let body;
     try { body = await req.json(); } catch { return json({ error: 'Bad request' }, 400, headers); }
-    const { person, pieces } = body || {};
+    const { person, pieces, base } = body || {};
+    const remove = Array.isArray(body?.remove) ? body.remove : [];
     const validImg = s => typeof s === 'string' && s.length > 100 && s.length <= MAX_IMAGE_B64 && B64.test(s);
-    if (!validImg(person) || !Array.isArray(pieces) || !pieces.length || pieces.length > MAX_PIECES ||
-        !pieces.every(p => p && CATS[p.cat] && validImg(p.image))) {
+    const catList = (a, max) => Array.isArray(a) && a.length <= max && a.every(c => CATS[c]);
+    const isEdit = base !== undefined;
+    if (!validImg(person) || !Array.isArray(pieces) || pieces.length > MAX_PIECES ||
+        !pieces.every(p => p && CATS[p.cat] && validImg(p.image) && (p.replaces === undefined || catList(p.replaces, 2))) ||
+        !catList(remove, 3) ||
+        (isEdit ? (!validImg(base) || pieces.length > 3 || !(pieces.length + remove.length)) : (!pieces.length || remove.length))) {
       return json({ error: 'Bad request' }, 400, headers);
     }
 
-    const parts = [
-      { text: buildPrompt(pieces.map(p => p.cat)) },
-      { text: 'Image 1 — the person:' }, { inline_data: { mime_type: 'image/jpeg', data: person } },
-    ];
-    pieces.forEach((p, i) => parts.push(
-      { text: `Image ${i + 2} — ${CATS[p.cat].one}:` }, { inline_data: { mime_type: 'image/jpeg', data: p.image } }));
+    const img = (label, data) => [{ text: label }, { inline_data: { mime_type: 'image/jpeg', data } }];
+    const parts = isEdit
+      ? [{ text: editPrompt(pieces, remove) }, ...img('Image 1 — current photo:', base), ...img('Image 2 — the person (reference):', person),
+         ...pieces.flatMap((p, i) => img(`Image ${i + 3} — new ${NAME[p.cat]}:`, p.image))]
+      : [{ text: buildPrompt(pieces.map(p => p.cat)) }, ...img('Image 1 — the person:', person),
+         ...pieces.flatMap((p, i) => img(`Image ${i + 2} — ${CATS[p.cat].one}:`, p.image))];
 
     let { r, j } = await callGemini(env, parts, true);
     if (r.status === 400) ({ r, j } = await callGemini(env, parts, false));
@@ -113,7 +145,8 @@ export default {
       const why = j.promptFeedback?.blockReason || cand?.finishReason;
       return json({ error: 'No image came back' + (why ? ` (${why})` : '') + '. Try a different photo or outfit.' }, 502, headers);
     }
-    const d = p.inlineData || p.inline_data;
-    return json({ image: d.data, mime: d.mimeType || d.mime_type || 'image/png' }, 200, headers);
+    const d = p.inlineData || p.inline_data, u = j.usageMetadata || {};
+    return json({ image: d.data, mime: d.mimeType || d.mime_type || 'image/png',
+      model: env.MODEL || 'gemini-2.5-flash-image', usage: { in: u.promptTokenCount || 0, out: u.candidatesTokenCount || 0 } }, 200, headers);
   },
 };

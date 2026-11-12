@@ -86,8 +86,19 @@
   .piece.flash{animation:pop .35s var(--ease)}
   @keyframes pop{50%{transform:scale(1.06)}}
   #stageImg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
-  .stage-seg{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:8;background:rgba(255,255,255,.75);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
-  .stage-seg button{height:34px;padding:0 14px;font-size:13px}
+  .stage-seg{flex:none}
+  .stage-seg button{height:36px;padding:0 14px;font-size:13px}
+  .expand{position:absolute;right:12px;bottom:12px;z-index:8;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  #stageImg{cursor:zoom-in}
+  .viewer{position:fixed;inset:0;z-index:60;background:rgba(10,10,10,1);display:flex;align-items:center;justify-content:center;touch-action:none;overflow:hidden;opacity:0;transition:opacity .2s}
+  .viewer.on{opacity:1}
+  .viewer > img{max-width:100%;max-height:100%;object-fit:contain;will-change:transform}
+  .viewer.anim > img{transition:transform .22s var(--ease)}
+  .vbar{position:absolute;top:calc(var(--st) + 10px);left:12px;right:12px;display:flex;justify-content:space-between;pointer-events:none}
+  .vbtn{pointer-events:auto;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.14);color:#fff;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  .vhint{position:absolute;bottom:calc(var(--sb) + 18px);left:0;right:0;text-align:center;color:rgba(255,255,255,.55);font-size:13px;pointer-events:none}
+  .media-seg{display:flex;justify-content:center;margin:-2px 0 14px}
+  .media.photo > img{cursor:zoom-in}
   .stage-ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;gap:6px;color:var(--muted);font-size:14px;line-height:1.5}
   .stage-ph b{color:var(--ink);font-size:19px;letter-spacing:-.02em}
   .stage-ph .btn{margin-top:12px}
@@ -163,6 +174,10 @@
   .field{width:100%;height:48px;border-radius:14px;border:1px solid var(--line);padding:0 14px;background:var(--bg);margin-bottom:8px;outline:none;font-size:16px;color:var(--ink)}
   .field:focus{border-color:var(--ink)}
   .lbl{display:block;font-size:13px;font-weight:600;margin:4px 2px 6px}
+  .spend{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
+  .spend div{background:var(--paper);border-radius:16px;padding:12px 14px}
+  .spend b{display:block;font-size:22px;letter-spacing:-.03em;line-height:1.2}
+  .spend small{display:block;color:var(--muted);font-size:12px;font-weight:600;line-height:1.4}
   .status{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:10px}
   .status::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
   .status.ok::before{background:#2e9e5b}
@@ -197,8 +212,7 @@
   .media > img{max-width:100%;max-height:100%;object-fit:contain;mix-blend-mode:multiply}
   .media.photo{padding:0}.media.photo > img{mix-blend-mode:normal;width:100%;height:100%}
   .media .board{height:94%}
-  .media .seg{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.75);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:3}
-  .sec-l{font-size:13px;font-weight:600;color:var(--muted);margin:16px 2px 8px}
+    .sec-l{font-size:13px;font-weight:600;color:var(--muted);margin:16px 2px 8px}
   .cat-pick{display:flex;flex-wrap:wrap;gap:6px}
   .cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
   .cat-grid .btn{height:56px;justify-content:flex-start;padding:0 18px;border-radius:18px}
@@ -242,6 +256,7 @@
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
   <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M15 4h5v5M9 20H4v-5M20 4l-6 6M4 20l6-6"/></symbol>
   <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M20 20H9l-5-5a1.5 1.5 0 0 1 0-2.1L13.9 3a1.5 1.5 0 0 1 2.1 0L21 8a1.5 1.5 0 0 1 0 2.1L11 20M8 9l7 7"/></symbol>
 </svg>
 
@@ -250,14 +265,15 @@
   <section class="view on" id="view-outfit" aria-label="Outfit">
     <header class="vh">
       <div><h1>Outfit</h1><p class="sub" id="outfitSub"></p></div>
+      <div class="seg stage-seg" id="stageSeg" hidden><button data-m="board">Pieces</button><button data-m="me">On me</button></div>
     </header>
     <div class="stage" id="stage">
       <div class="board" id="board"></div>
       <img id="stageImg" alt="You wearing this outfit" hidden>
       <div class="stage-ph" id="stagePh" hidden></div>
-      <div class="seg stage-seg" id="stageSeg" hidden><button data-m="board">Pieces</button><button data-m="me">On me</button></div>
+      <button class="expand" id="btnExpand" aria-label="View full screen" hidden><svg class="i s"><use href="#i-expand"/></svg></button>
       <div class="drop-hint" id="dropHint"></div>
-      <div class="busy" id="stageBusy" hidden><div class="spin"></div><div>Styling you…</div><small>Usually 10–30 seconds</small><button class="btn sm" id="btnCancelGen">Cancel</button></div>
+      <div class="busy" id="stageBusy" hidden><div class="spin"></div><div id="busyTitle">Styling you…</div><small id="busySub">Usually 10–30 seconds</small><button class="btn sm" id="btnCancelGen">Cancel</button></div>
     </div>
     <div class="actions">
       <button class="round" id="btnShuffle" aria-label="Shuffle outfit"><svg class="i"><use href="#i-shuffle"/></svg></button>
@@ -409,6 +425,8 @@ let trayCat = CAT[LS.get('op_tray')] ? LS.get('op_tray') : 'top';
 let stageMode = 'board';
 let wardFilter = 'all';
 const pending = new Map(); // look key -> AbortController
+const pendingInfo = new Map(); // look key -> {title, sub}
+let meId = null;           // id of the current "me" photo; try-ons remember which photo they were made from
 
 const urlCache = new WeakMap();
 const url = blob => { if(!blob) return ''; let u=urlCache.get(blob); if(!u){u=URL.createObjectURL(blob);urlCache.set(blob,u);} return u; };
@@ -424,7 +442,7 @@ const isSaved = l => !!(l && (l.saved || l.image));
 let snackT;
 function snack(msg, action, fn, ms){
   const s=$('#snack');
-  s.replaceChildren(el('span',{},msg), action ? el('button',{onclick:()=>{ hideSnack(); fn(); }},action) : null);
+  s.replaceChildren(...[el('span',{},msg), action ? el('button',{onclick:()=>{ hideSnack(); fn(); }},action) : null].filter(Boolean));
   s.classList.add('on'); clearTimeout(snackT);
   snackT=setTimeout(hideSnack, ms || (action?5000:2600));
 }
@@ -630,8 +648,10 @@ function renderOutfit(){
   $('#board').hidden = showMe;
   const si=$('#stageImg'); si.hidden=!showMe; if(showMe && si.src!==url(img)) si.src=url(img);
   $('#stageSeg').hidden=!img;
+  $('#btnExpand').hidden=!showMe;
   $$('#stageSeg button').forEach(b=>b.classList.toggle('on', b.dataset.m===(showMe?'me':'board')));
   $('#stageBusy').hidden=!isPending;
+  if(isPending){ const info=pendingInfo.get(k)||{}; $('#busyTitle').textContent=info.title||'Styling you…'; $('#busySub').textContent=info.sub||'Usually 10–30 seconds'; }
 
   const ph=$('#stagePh');
   if(!outfit.length){
@@ -692,6 +712,9 @@ function setTray(cat, scrollTo){
   if(scrollTo) $(`#trayRow [data-id="${scrollTo}"]`)?.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
 }
 $$('#stageSeg button').forEach(b=>b.onclick=()=>{ stageMode=b.dataset.m; renderOutfit(); });
+const stagePhoto=()=>{ const k=curKey(), img=k&&looks.get(k)?.image; if(img) openViewer(img); };
+$('#stageImg').addEventListener('click', stagePhoto);
+$('#btnExpand').addEventListener('click', stagePhoto);
 $('#board').addEventListener('click', e=>{
   if(dragSuppressed()) return;
   const id=e.target.closest('.piece')?.dataset.id; const it=itemOf(id); if(!it) return;
@@ -775,6 +798,74 @@ async function toggleSave(){
   renderAll(); snack('Saved to Looks','View',()=>switchView('looks'));
 }
 
+/* ---------- cost tracking ---------- */
+// USD per 1M tokens (Google list price). Image output is billed as tokens: 1290 per 1024px image.
+const PRICES = { 'gemini-2.5-flash-image': {in:0.30, out:30} };
+function costOf(model, usage, nImages){
+  const pr=PRICES[model];
+  const tin=usage?.in ?? (nImages*258+500), tout=usage?.out ?? 1290;
+  return pr ? (tin*pr.in + tout*pr.out)/1e6 : 0.039;
+}
+const spendLog = () => { try{ return JSON.parse(LS.get('op_spend','[]'))||[]; }catch{ return []; } };
+function logSpend(usd, edit){ const l=spendLog(); l.push({t:Date.now(), usd:+usd.toFixed(5), edit:!!edit}); LS.set('op_spend', JSON.stringify(l.slice(-2000))); }
+function spendSummary(){
+  const l=spendLog(), m=new Date(); m.setDate(1); m.setHours(0,0,0,0);
+  const sum=a=>a.reduce((s,x)=>s+x.usd,0), month=l.filter(x=>x.t>=m.getTime());
+  return {all:sum(l), n:l.length, month:sum(month), nMonth:month.length, edits:l.filter(x=>x.edit).length, since:l[0]?.t};
+}
+const money = usd => usd < 1 ? `${(usd*100).toFixed(usd<0.1?1:0)}¢` : `$${usd.toFixed(2)}`;
+
+/* ---------- "change one piece": edit the closest earlier try-on instead of starting over ---------- */
+const NAME = {top:'top', bottom:'bottoms', dress:'dress', outer:'jacket or coat', shoes:'shoes', bag:'bag', acc:'accessory'};
+const MUST_HAVE = new Set(['top','bottom','dress','shoes']); // removing these without a replacement needs a fresh try-on
+function planEdit(baseIds, targetIds){
+  const added=targetIds.filter(id=>!baseIds.includes(id)).map(itemOf), removed=baseIds.filter(id=>!targetIds.includes(id)).map(itemOf);
+  if(added.some(x=>!x) || removed.some(x=>!x)) return null;
+  const rem=removed.map(it=>it.cat), take=c=>{ const i=rem.indexOf(c); if(i<0) return false; rem.splice(i,1); return true; };
+  const add=added.map(it=>{
+    let replaces=[];
+    if(take(it.cat)) replaces=[it.cat];
+    else if(it.cat==='dress') replaces=['top','bottom'].filter(take);
+    else if(it.cat==='top'||it.cat==='bottom'){ if(take('dress')) replaces=['dress']; }
+    return {id:it.id, cat:it.cat, replaces};
+  });
+  if(rem.some(c=>MUST_HAVE.has(c))) return null;
+  const changes=add.length+rem.length, kept=targetIds.filter(id=>baseIds.includes(id)).length;
+  if(!changes || add.length>2 || changes>3 || !kept) return null;
+  return {add, remove:rem, changes};
+}
+function findBase(ids){
+  const k=lookKey(ids); let best=null;
+  for(const l of looks.values()){
+    if(!l.image || l.key===k || !meId || l.meId!==meId) continue;
+    const plan=planEdit(l.items, ids); if(!plan) continue;
+    if(!best || plan.changes<best.plan.changes || (plan.changes===best.plan.changes && l.created>best.look.created)) best={look:l, plan};
+  }
+  return best;
+}
+function editLines(plan){
+  return [
+    ...plan.add.map((a,i)=>{ const n=i+3, what=NAME[a.cat];
+      return a.replaces.length ? `- Replace their ${a.replaces.map(c=>NAME[c]).join(' and ')} with the ${what} shown in image ${n}.`
+        : `- Add the ${what} shown in image ${n}${a.cat==='outer'?', worn over the rest of the outfit':''}.`; }),
+    ...plan.remove.map(c=>`- Remove their ${NAME[c]}.`),
+  ].join('\n');
+}
+function editPrompt(plan){
+  return `Edit image 1, a photo of a person wearing an outfit. Make only these changes:
+${editLines(plan)}
+Rules:
+- Keep everything else in image 1 exactly as it is: the same person, face, hair, skin tone, body shape, pose, framing, background, lighting and every other piece of clothing.
+- Image 2 is a reference photo of the same person. Use it only to keep their face and identity accurate.
+- Reproduce each new item's exact color, pattern, print, logos and details, with a natural, realistic fit.
+- Return the full edited photo, full body from head to feet, portrait 3:4.`;
+}
+function planLabel(plan){
+  const a=plan.add.map(x=>NAME[x.cat]), r=plan.remove.map(c=>NAME[c]);
+  const list=w=>w.length>1 ? w.slice(0,-1).join(', ')+' and '+w.at(-1) : w[0];
+  return a.length ? `Changing the ${list(a)}…` : `Removing the ${list(r)}…`;
+}
+
 /* ---------- try-on generation ---------- */
 function buildPrompt(cats){
   const lines = cats.map((c,i)=>`- Image ${i+2}: ${CAT[c].prompt}`).join('\n');
@@ -789,27 +880,38 @@ Rules:
 - Plain light-grey studio background, soft even lighting, sharp photographic quality, portrait 3:4.`;
 }
 async function prep(blob, max){ return toB64(await shrink(blob, max, .86)); }
-async function generate(ids, signal){
-  const its=ids.map(itemOf).filter(Boolean);
+async function generate(ids, signal, base){
   const person=await prep(me, 1024);
-  const pieces=await Promise.all(its.map(async it=>({cat:it.cat, image:await prep(shown(it), 768)})));
+  let pieces, baseImg=null, remove=[];
+  if(base){
+    baseImg=await prep(base.look.image, 1024); remove=base.plan.remove;
+    pieces=await Promise.all(base.plan.add.map(async a=>({cat:a.cat, replaces:a.replaces, image:await prep(shown(itemOf(a.id)), 768)})));
+  } else {
+    pieces=await Promise.all(ids.map(itemOf).filter(Boolean).map(async it=>({cat:it.cat, image:await prep(shown(it), 768)})));
+  }
+  const nImages=pieces.length+(base?2:1);
   if(cfg.mode==='service'){
     let r;
     try{
       r = await fetch(cfg.endpoint+'/tryon',{method:'POST',signal,
         headers:{'Content-Type':'application/json', ...(cfg.code?{'X-Access-Code':cfg.code}:{})},
-        body:JSON.stringify({person, pieces})});
+        body:JSON.stringify(base ? {person, base:baseImg, pieces, remove} : {person, pieces})});
     }catch(e){ if(e.name==='AbortError') throw e; throw new Error('Could not reach the try-on service. Check your connection.'); }
     const j=await r.json().catch(()=>({}));
     if(r.status===401) throw new Error('The try-on service needs a valid access code. Add it in the Me tab.');
     if(r.status===429) throw new Error(j.error || 'Too many try-ons right now. Try again in a minute.');
     if(!r.ok || !j.image) throw new Error(j.error || `Try-on failed (${r.status}). Try again.`);
-    return b64ToBlob(j.image, j.mime||'image/png');
+    return {blob:b64ToBlob(j.image, j.mime||'image/png'), cost:costOf(j.model||'gemini-2.5-flash-image', j.usage, nImages)};
   }
   if(cfg.mode==='key'){
-    const parts=[{text:buildPrompt(pieces.map(p=>p.cat))}, {text:'Image 1 — the person:'}, {inline_data:{mime_type:'image/jpeg',data:person}}];
-    pieces.forEach((p,i)=>parts.push({text:`Image ${i+2} — ${CAT[p.cat].one.toLowerCase()}:`}, {inline_data:{mime_type:'image/jpeg',data:p.image}}));
-    return geminiDirect(parts, signal);
+    const img=(t,d)=>[{text:t},{inline_data:{mime_type:'image/jpeg',data:d}}];
+    const parts = base
+      ? [{text:editPrompt(base.plan)}, ...img('Image 1 — current photo:',baseImg), ...img('Image 2 — the person (reference):',person),
+         ...pieces.flatMap((p,i)=>img(`Image ${i+3} — new ${NAME[p.cat]}:`,p.image))]
+      : [{text:buildPrompt(pieces.map(p=>p.cat))}, ...img('Image 1 — the person:',person),
+         ...pieces.flatMap((p,i)=>img(`Image ${i+2} — ${CAT[p.cat].one.toLowerCase()}:`,p.image))];
+    const {blob, usage}=await geminiDirect(parts, signal);
+    return {blob, cost:costOf(cfg.model, usage, nImages)};
   }
   throw new Error('NOT_SETUP');
 }
@@ -834,28 +936,34 @@ async function geminiDirect(parts, signal){
     const txt=cand?.content?.parts?.find(p=>p.text)?.text, why=j.promptFeedback?.blockReason||cand?.finishReason;
     throw new Error(txt ? 'Gemini replied: '+txt.slice(0,160) : 'No image came back'+(why?` (${why})`:'')+'. Try again.');
   }
-  const d=p.inlineData||p.inline_data;
-  return b64ToBlob(d.data, d.mimeType||d.mime_type||'image/png');
+  const d=p.inlineData||p.inline_data, u=j.usageMetadata;
+  return {blob:b64ToBlob(d.data, d.mimeType||d.mime_type||'image/png'), usage:u?{in:u.promptTokenCount||0, out:u.candidatesTokenCount||0}:null};
 }
-async function tryOn(){
+async function tryOn(opts={}){
   const k=curKey(); if(!k) return toast('Add some pieces first');
   if(!me) return needPhotoSheet();
   if(!cfg.mode) return setupSheet();
   if(pending.has(k)) return;
   const ids=[...outfit], ctrl=new AbortController();
-  pending.set(k, ctrl); renderOutfit();
+  const base = opts.fresh ? null : findBase(ids);
+  pending.set(k, ctrl);
+  pendingInfo.set(k, base ? {title:planLabel(base.plan), sub:'Editing your last try-on · 10–30 seconds'} : {title:'Styling you…', sub:'Usually 10–30 seconds'});
+  renderOutfit();
   try{
-    const blob=await generate(ids, ctrl.signal);
+    const {blob, cost}=await generate(ids, ctrl.signal, base);
+    logSpend(cost, !!base);
     const prev=looks.get(k);
-    await putLook({key:k, items:ids, image:await shrink(blob,1400,.92), created:Date.now(), saved:true, ...(prev?{created:prev.created}:{})});
-    if(curKey()===k){ stageMode='me'; }
-    else snack('Your try-on is ready','View',()=>{ setOutfit(enforce(ids)); stageMode='me'; renderOutfit(); switchView('outfit'); });
+    await putLook({key:k, items:ids, image:await shrink(blob,1400,.92), created:prev?.created||Date.now(), saved:true, meId, cost:(prev?.cost||0)+cost, from:base?base.look.key:null});
+    const msg=`Ready · ${money(cost)} · ${money(spendSummary().month)} this month`;
+    if(curKey()===k){ stageMode='me'; toast(msg); }
+    else snack(msg,'View',()=>{ setOutfit(enforce(ids)); stageMode='me'; renderOutfit(); switchView('outfit'); });
   }catch(e){
     if(e.name==='AbortError') toast('Cancelled');
     else openSheet([el('p',{class:'msg'},e.message),
-      el('div',{class:'stack'}, B('Try again',()=>{ closeSheet(); tryOn(); },'primary','refresh'),
+      el('div',{class:'stack'}, B('Try again',()=>{ closeSheet(); tryOn(opts); },'primary','refresh'),
+        base ? B('Try from scratch',()=>{ closeSheet(); tryOn({fresh:true}); },'','spark') : null,
         B('Copy outfit image instead',()=>{ closeSheet(); copyCollage(); },'','copy'))], {title:'Try-on didn’t work'});
-  }finally{ pending.delete(k); renderAll(); }
+  }finally{ pending.delete(k); pendingInfo.delete(k); renderAll(); }
 }
 function needPhotoSheet(){
   openSheet([el('p',{class:'msg'},'Try-on needs one full-body photo of you: standing, facing the camera, head to feet in frame.'),
@@ -934,7 +1042,7 @@ async function shareCollage(){
 }
 async function saveLookFrom(k, ids, blob){
   const prev=looks.get(k);
-  await putLook({key:k, items:ids, image:await shrink(blob,1400,.92), created:prev?.created||Date.now(), saved:true});
+  await putLook({key:k, items:ids, image:await shrink(blob,1400,.92), created:prev?.created||Date.now(), saved:true, meId});
   stageMode='me'; renderAll(); toast('Try-on photo added');
 }
 let resultFor=null;
@@ -952,6 +1060,7 @@ function moreSheet(){
   if(k && me) ensureCollage();
   const row=(ic, title, sub, fn, cls='')=>el('button',{class:cls, onclick:()=>{ closeSheet(); fn(); }}, el('span',{class:'ico'},icon(ic)), el('span',{}, title, sub?el('small',{},sub):null));
   openSheet([el('div',{class:'menu'},
+    k && cfg.mode && me && findBase([...outfit]) ? row('spark','Try on from scratch','Make a new photo instead of editing your last try-on', ()=>tryOn({fresh:true})) : null,
     k ? row('copy','Copy outfit image','You, the pieces and instructions in one image, ready to paste into Gemini', copyCollage) : null,
     k ? row('share','Share outfit image','Send it to the Gemini app or save it', shareCollage) : null,
     k ? row('image','Add a try-on photo','Import a result you made in another app', ()=>{ resultFor={k, ids:[...outfit]}; $('#resultInput').click(); }) : null,
@@ -1056,18 +1165,73 @@ function renderLooks(){
 function lookSheet(k){
   const l=looks.get(k); if(!l) return;
   const media=el('div',{class:'media'+(l.image?' photo':''),style:'height:min(60dvh,520px)'});
-  const show=m=>{ media.className='media'+(m==='me'?' photo':''); media.replaceChildren(m==='me'?el('img',{src:url(l.image),alt:''}):miniBoard(l.items), l.image?segEl:null); };
-  const segEl = l.image ? seg([['board','Pieces'],['me','On me']],'me',show) : null;
+  const show=m=>{ media.className='media'+(m==='me'?' photo':''); media.replaceChildren(m==='me'?el('img',{src:url(l.image),alt:'Tap to view full screen',onclick:()=>openViewer(l.image)}):miniBoard(l.items)); };
+  const segEl = l.image ? el('div',{class:'media-seg'}, seg([['board','Pieces'],['me','On me']],'me',show)) : null;
   show(l.image?'me':'board');
-  openSheet([media,
+  openSheet([media, segEl,
     el('div',{class:'stack'},
       B('Wear this outfit', ()=>{ closeSheet(); setOutfit(enforce(l.items)); stageMode=l.image?'me':'board'; renderOutfit(); switchView('outfit'); }, 'primary'),
-      l.image ? B('Save photo', async()=>{
-        const f=new File([l.image],'look.jpg',{type:l.image.type||'image/jpeg'});
-        if(navigator.canShare?.({files:[f]})){ try{ await navigator.share({files:[f]}); return; }catch(e){ if(e.name==='AbortError') return; } }
-        download(f,'look.jpg'); }, '', 'share') : null,
-      B('Delete look', ()=>{ closeSheet(); removeLook(k,'Look deleted'); }, 'danger', 'trash'))
+      l.image ? B('Save photo', ()=>savePhoto(l.image), '', 'share') : null,
+      B('Delete look', ()=>{ closeSheet(); removeLook(k,'Look deleted'); }, 'danger', 'trash')),
+    l.cost ? el('p',{class:'msg',style:'text-align:center;font-size:13px;margin:12px 0 0'},`Try-on cost about ${money(l.cost)}`) : null,
   ], {title:plural(l.items.filter(itemOf).length,'piece')});
+}
+
+/* ---------- full-screen photo viewer (pinch / double-tap zoom, swipe down to close) ---------- */
+async function savePhoto(blob){
+  const f=new File([blob],'look.jpg',{type:blob.type||'image/jpeg'});
+  if(navigator.canShare?.({files:[f]})){ try{ await navigator.share({files:[f]}); return; }catch(e){ if(e.name==='AbortError') return; } }
+  download(f,'look.jpg');
+}
+let viewerClose=null;
+function openViewer(blob){
+  if(viewerClose) return;
+  const img=el('img',{src:url(blob),alt:'Try-on photo',draggable:'false'});
+  const wasLocked=locked; lockScroll();
+  const v=el('div',{class:'viewer',role:'dialog','aria-modal':'true','aria-label':'Photo'}, img,
+    el('div',{class:'vbar'},
+      el('button',{class:'vbtn','aria-label':'Close',onclick:()=>close()}, icon('x')),
+      el('button',{class:'vbtn','aria-label':'Save photo',onclick:()=>savePhoto(blob)}, icon('share'))),
+    el('div',{class:'vhint'},'Pinch or double-tap to zoom'));
+  document.body.append(v); void v.offsetWidth; v.classList.add('on');
+  let s=1, tx=0, ty=0, g=null, lastTap=0;
+  const pts=new Map();
+  const apply=()=>{ img.style.transform=`translate(${tx}px,${ty}px) scale(${s})`; };
+  const anim=()=>{ v.classList.add('anim'); setTimeout(()=>v.classList.remove('anim'),240); };
+  const bound=()=>{ const w=img.offsetWidth*s, h=img.offsetHeight*s, W=innerWidth, H=innerHeight;
+    const mx=Math.max(0,(w-W)/2), my=Math.max(0,(h-H)/2); tx=Math.min(mx,Math.max(-mx,tx)); ty=Math.min(my,Math.max(-my,ty)); };
+  const center=()=>({x:innerWidth/2, y:innerHeight/2});
+  const start=()=>{ const p=[...pts.values()];
+    if(p.length>=2){ const [a,b]=p; g={pinch:true, d0:Math.hypot(a.x-b.x,a.y-b.y)||1, m0:{x:(a.x+b.x)/2,y:(a.y+b.y)/2}, s0:s, tx0:tx, ty0:ty}; }
+    else if(p.length===1){ g={pinch:false, p0:{...p[0]}, tx0:tx, ty0:ty, moved:false}; } };
+  v.addEventListener('pointerdown', e=>{ if(e.target.closest('.vbtn')) return; pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); start(); });
+  v.addEventListener('pointermove', e=>{ if(!pts.has(e.pointerId)||!g) return; pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    const p=[...pts.values()], c=center();
+    if(g.pinch && p.length>=2){ const [a,b]=p, m={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+      s=Math.min(5,Math.max(.8,g.s0*Math.hypot(a.x-b.x,a.y-b.y)/g.d0));
+      tx=(m.x-c.x)-(g.m0.x-c.x-g.tx0)*(s/g.s0); ty=(m.y-c.y)-(g.m0.y-c.y-g.ty0)*(s/g.s0); apply(); }
+    else if(!g.pinch){ const dx=e.clientX-g.p0.x, dy=e.clientY-g.p0.y; if(Math.hypot(dx,dy)>8) g.moved=true;
+      if(s>1.01){ tx=g.tx0+dx; ty=g.ty0+dy; apply(); }
+      else { ty=Math.max(0,dy); tx=0; apply(); v.style.background=`rgba(10,10,10,${1-Math.min(.7,ty/400)})`; } } });
+  const up=e=>{ if(!pts.has(e.pointerId)) return; pts.delete(e.pointerId);
+    if(g && !g.pinch){
+      if(s<=1.01 && ty>110){ close(); return; }
+      if(!g.moved){ const now=Date.now();
+        if(now-lastTap<300){ lastTap=0; const c=center();
+          if(s>1.01){ s=1; tx=0; ty=0; } else { s=2.5; tx=-(g.p0.x-c.x)*1.5; ty=-(g.p0.y-c.y)*1.5; bound(); }
+          v.style.background=''; anim(); apply(); g=null; return; }
+        lastTap=now; } }
+    if(s<1.05){ s=1; tx=0; ty=0; } else bound();
+    v.style.background=''; anim(); apply();
+    if(pts.size) start(); else g=null; };
+  v.addEventListener('pointerup', up); v.addEventListener('pointercancel', up);
+  v.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+  const key=e=>{ if(e.key==='Escape'){ e.stopImmediatePropagation(); close(); } };
+  document.addEventListener('keydown', key, true);
+  function close(){ if(!viewerClose) return; viewerClose=null; document.removeEventListener('keydown', key, true);
+    v.classList.remove('on'); setTimeout(()=>v.remove(),220); if(!wasLocked) unlockScroll(); }
+  viewerClose=close;
+  v.querySelector('.vbtn').focus({preventScroll:true});
 }
 
 /* ---------- me ---------- */
@@ -1085,14 +1249,24 @@ function renderGenCard(){
   const status = mode==='service' ? el('div',{class:'status ok'},'Ready: built-in try-on')
     : mode==='key' ? el('div',{class:'status ok'},'Ready: using your Gemini key')
     : el('div',{class:'status'},'Not set up on this device');
-  const desc = mode==='service' ? 'Looks are generated inside the app. Each new try-on costs about 4¢, and every result is saved, so you only pay once per outfit.'
+  const desc = mode==='service' ? 'Looks are generated inside the app. Each new try-on costs about 4¢. Every result is saved, so you pay once per outfit, and changing a piece edits your last try-on.'
     : mode==='key' ? 'Looks are generated with your own Gemini API key, about 4¢ each. Your key stays on this device.'
     : 'Add a Gemini API key below to generate looks in the app (about 4¢ each). Without one, you can still copy the outfit image and paste it into Gemini.';
   const f=(id,ph,val,type='text')=>el('input',{class:'field',id,placeholder:ph,value:val,type,autocomplete:'off',autocapitalize:'off',spellcheck:'false'});
   const hasService=!!cfg.endpoint;
   const choose = hasService && cfg.key ? [el('label',{class:'lbl'},'Generate with'), seg([['service','Built-in'],['key','My key']], mode==='key'?'key':'service', v=>{ LS.set('op_gen',v); renderGenCard(); }, 'full'), el('div',{style:'height:12px'})] : [];
+  const sp=spendSummary();
+  const spend = sp.n ? [
+    el('label',{class:'lbl'},'Spent on this device'),
+    el('div',{class:'spend'},
+      el('div',{}, el('b',{},money(sp.month)), el('small',{},'This month'), el('small',{},plural(sp.nMonth,'try-on'))),
+      el('div',{}, el('b',{},money(sp.all)), el('small',{},'All time'), el('small',{},plural(sp.n,'try-on')))),
+    el('p',{style:'font-size:13px'}, sp.edits ? `${plural(sp.edits,'try-on')} edited your last photo instead of starting over. ` : '',
+      'Estimated from Gemini’s usage numbers. Your exact bill is in Google AI Studio.',
+      ' ', el('a',{href:'#',onclick:async e=>{ e.preventDefault(); if(await ask('Reset the spending total?','This only resets the counter on this device.','Reset')){ LS.set('op_spend','[]'); renderGenCard(); } }},'Reset')),
+  ] : [];
   card.replaceChildren(...[
-    el('h2',{},'Try-on'), status, el('p',{},desc),
+    el('h2',{},'Try-on'), status, el('p',{},desc), spend,
     hasService ? [el('label',{class:'lbl',for:'codeInput'},'Access code (if you were given one)'), f('codeInput','Access code',cfg.code,'password')] : null,
     el('details',{open:!mode||null},
       el('summary',{},'Advanced'),
@@ -1113,11 +1287,11 @@ function renderGenCard(){
 $('#btnMePhoto').onclick = () => $('#meInput').click();
 $('#btnMeRemove').onclick = async () => {
   if(!await ask('Remove your photo?','Try-on photos you already made are kept.','Remove')) return;
-  me=null; await del('meta','me'); collageCache=null; renderAll();
+  me=null; meId=null; await del('meta','me'); await del('meta','meId'); collageCache=null; renderAll();
 };
 $('#meInput').addEventListener('change', async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
-  try{ me=await shrink(f,1400,.92); await put('meta',me,'me'); }catch(err){ return toast(err.message); }
+  try{ me=await shrink(f,1400,.92); await put('meta',me,'me'); meId='m'+Date.now(); await put('meta',meId,'meId'); }catch(err){ return toast(err.message); }
   collageCache=null; renderAll();
   const imgs=[...looks.values()].filter(l=>l.image).length;
   if(imgs && await ask('Photo saved','Your try-on photos were made with your old photo. Delete them so you can make new ones?','Delete try-ons')) clearTryOns();
@@ -1159,6 +1333,9 @@ function renderAll(){ renderOutfit(); renderWardrobe(); renderLooks(); renderMe(
       await put('looks',nl); looks.set(nl.key,nl);
     }
     me=(await get('meta','me'))||null;
+    meId=(await get('meta','meId'))||null;
+    if(me && !meId){ meId='m'+Date.now(); await put('meta',meId,'meId');
+      for(const l of looks.values()) if(l.image && !l.meId){ l.meId=meId; await put('looks',l); } }
     navigator.storage?.persist?.().catch(()=>{});
     items.filter(i=>i.status==='work'||i.status==='raw'||(i.status==='err'&&!i.product)).forEach(i=>queueCleanup(i.id));
   }catch(e){ toast('Storage isn’t available in this browser, so nothing will be saved.', 5000); }

@@ -22,4 +22,8 @@ There are two ways to turn it on:
    Then set `BUILTIN_ENDPOINT` near the top of the script in `index.html` to the Worker URL (`https://outfits-tryon.<you>.workers.dev`). `ALLOWED_ORIGINS` in `wrangler.toml` limits which sites can call it. Uncomment the rate-limit block to cap requests at 10 per IP per minute.
 2. **Your own key**: Me → Advanced → paste a Gemini API key. The browser calls Gemini directly.
 
+**Changing one piece** (for example only the shoes) edits your closest earlier try-on instead of starting over: the app sends that photo, your reference photo and only the new pieces. It costs the same per image, but your face and the rest of the outfit stay consistent, so fewer retries are needed. Use ••• → *Try on from scratch* to force a fresh photo.
+
+**Spending**: Me → Try-on shows an estimate for this month and all time, computed from Gemini's token usage at list price. Your exact bill is in Google AI Studio.
+
 To try a cheaper or newer image model, change `MODEL` in `wrangler.toml`, or the Model field in the app.
