@@ -7,227 +7,364 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Outfits">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#fafaf9">
 <title>Outfits</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#ffffff; --soft:#f3f3f2; --soft2:#e9e9e7; --ink:#111111; --muted:#767676;
-    --accent:#111111; --ok:#1f7a4d; --danger:#c62828;
-    --r:24px; --tab:58px;
-    --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+    --bg:#fafaf9; --surface:#ffffff; --paper:#f1f0ed; --line:#e8e7e3; --line2:#d4d3ce;
+    --ink:#111111; --ink2:#3d3d3b; --muted:#8a8a86; --danger:#d0342c;
+    --tabh:60px; --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+    --ease:cubic-bezier(.2,.8,.2,1);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   [hidden]{display:none!important}
-  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,-apple-system,system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
-  button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
-  input{font:inherit}
-  header{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:calc(var(--st) + 14px) 18px 10px;display:flex;align-items:center;justify-content:space-between}
-  header h1{font-weight:700;font-size:24px;margin:0;letter-spacing:-.03em}
-  header h1 i{font-style:normal;color:var(--muted);font-weight:500}
-  header small{color:var(--muted);font-size:12px;font-weight:500}
-  main{padding:4px 12px calc(var(--tab) + var(--sb) + 40px)}
+  html{overscroll-behavior-y:none}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,-apple-system,system-ui,sans-serif;font-size:16px;line-height:1.4;-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%}
+  body{padding-bottom:calc(var(--tabh) + var(--sb))}
+  .locked body{position:fixed;left:0;right:0;overflow:hidden}
+  button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0;touch-action:manipulation}
+  button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  input{font:inherit;font-size:16px}
+  img{-webkit-user-drag:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  a{color:var(--ink)}
+
+  /* icons */
+  .i{width:22px;height:22px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .i.s{width:18px;height:18px}
+
+  /* layout */
+  main{padding:0 16px;max-width:560px;margin:0 auto}
   .view{display:none}
-  .view.on{display:block;animation:fade .25s ease}
+  .view.on{display:block;animation:fade .22s var(--ease)}
   @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .vh{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(var(--st) + 14px) 0 12px;min-height:64px}
+  .vh h1{font-size:26px;font-weight:700;letter-spacing:-.035em;margin:0;line-height:1.1}
+  .vh .sub{margin:2px 0 0;color:var(--muted);font-size:13px;font-weight:500}
 
-  /* stage */
-  .stage{position:relative;background:var(--soft);border-radius:28px;aspect-ratio:3/4;max-height:50vh;margin:0 auto;width:100%;overflow:hidden;display:flex;align-items:center;justify-content:center}
-  #stageImg{width:100%;height:100%;object-fit:cover;display:block}
-  .stage .ph{text-align:center;color:var(--muted);padding:28px;line-height:1.5;font-size:14px;max-width:280px}
-  .stage .ph b{display:block;font-weight:700;font-size:20px;letter-spacing:-.02em;color:var(--ink);margin-bottom:6px}
-  .chip{position:absolute;top:14px;left:14px;background:#fff;border-radius:99px;padding:6px 12px;font-size:12px;font-weight:600}
-  .chip.ok{color:var(--ink)}
-  .busy{white-space:pre-line;position:absolute;inset:0;background:rgba(243,243,242,.82);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--ink);font-weight:500;font-size:14px;text-align:center;padding:20px}
-  .busy.on{display:flex}
-  .spin{width:28px;height:28px;border-radius:50%;border:2.5px solid var(--soft2);border-top-color:var(--ink);animation:sp .8s linear infinite}
-  @keyframes sp{to{transform:rotate(360deg)}}
-
-  .actions{display:flex;gap:8px;margin:12px 0 20px}
-  .btn{flex:1;height:48px;border-radius:99px;background:var(--soft);font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .1s, background .15s}
+  /* buttons */
+  .btn{height:48px;padding:0 20px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-weight:600;font-size:15px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .12s var(--ease),background .15s,opacity .15s;white-space:nowrap}
   .btn:active{transform:scale(.97)}
-  .btn.primary,.btn.accent{background:var(--ink);color:#fff}
+  .btn.primary{background:var(--ink);border-color:var(--ink);color:#fff}
   .btn.danger{color:var(--danger)}
-  .btn:disabled{opacity:.35}
-  .btn.sm{height:38px;flex:none;padding:0 16px;font-size:14px}
+  .btn.danger-fill{background:var(--danger);border-color:var(--danger);color:#fff}
+  .btn.ghost{background:transparent;border-color:transparent}
+  .btn.block{width:100%}
+  .btn.sm{height:40px;padding:0 16px;font-size:14px}
+  .btn:disabled{opacity:.4;pointer-events:none}
+  .round{width:48px;height:48px;flex:none;border-radius:50%;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;transition:transform .12s var(--ease)}
+  .round:active{transform:scale(.94)}
+  .round.on{color:var(--danger)}
+  .round.on .i{fill:currentColor}
+  .icon-btn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;flex:none}
+  .icon-btn:active{background:var(--paper)}
 
-  .flat{position:absolute;inset:0;display:none}
-  .flat.on{display:block}
-  .flat img{position:absolute;left:50%;transform:translateX(-50%);object-fit:contain;mix-blend-mode:multiply}
-  .flat .f-top{top:3%;height:40%;width:82%}
-  .flat .f-bottom{top:39%;height:43%;width:72%}
-  .flat .f-shoes{bottom:3%;height:16%;width:46%}
-  .seg.mode{margin:0 0 10px}
-  .seg.mode button{flex:1}
-  .stage .ph small{display:block;margin-top:8px;font-size:12px}
-  .ph .btn{margin:16px auto 0;width:100%;max-width:240px;flex:none}
-  .ph .steps{text-align:left;margin:14px auto 0;padding-left:18px;font-size:13px;max-width:240px}
-  .ph .steps li{margin:3px 0}
-  .ph .link{display:block;margin:10px auto 0;font-size:12px;text-decoration:underline;text-underline-offset:3px;color:var(--muted)}
+  /* segmented */
+  .seg{display:inline-flex;background:var(--paper);border-radius:99px;padding:3px;gap:2px}
+  .seg button{white-space:nowrap;height:36px;padding:0 16px;border-radius:99px;font-size:14px;font-weight:600;color:var(--muted);transition:background .15s,color .15s}
+  .seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .seg.full{display:flex}.seg.full button{flex:1}
 
-  /* carousels */
-  .row{margin-bottom:14px}
-  .row-h{display:flex;justify-content:space-between;align-items:center;margin:0 6px 7px;font-size:13px;color:var(--ink);font-weight:600}
-  .row-h span:last-child{color:var(--muted);font-weight:500;font-size:12px}
-  .car-wrap{position:relative}
-  .car{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;background:var(--soft);border-radius:var(--r);height:120px;scrollbar-width:none}
-  .car::-webkit-scrollbar{display:none}
-  .slide{flex:0 0 100%;scroll-snap-align:center;display:flex;align-items:center;justify-content:center;padding:12px}
-  .slide img{max-width:100%;max-height:100%;object-fit:contain;mix-blend-mode:multiply;border-radius:10px}
-  .empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;text-align:center;padding:12px}
-  .empty button{color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:3px}
-  .nav{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1;box-shadow:0 1px 6px rgba(0,0,0,.08)}
-  .nav.l{left:10px}.nav.r{right:10px}
+  /* chips */
+  .chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 16px 10px;margin:0 -16px}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;height:40px;padding:0 15px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:background .15s,color .15s}
+  .chip .n{color:var(--muted);font-size:12px;font-weight:500}
+  .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .chip.on .n{color:rgba(255,255,255,.6)}
+  .chip .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
 
-  /* wardrobe */
-  .seg{display:flex;gap:6px;overflow-x:auto;margin:2px 0 12px;scrollbar-width:none}
-  .seg::-webkit-scrollbar{display:none}
-  .seg button{flex:none;height:36px;padding:0 16px;border-radius:99px;font-weight:600;font-size:14px;background:var(--soft);color:var(--ink)}
-  .seg button.on{background:var(--ink);color:#fff}
-  .sheet .seg button{flex:1}
-  .adds{display:flex;gap:6px;margin-bottom:6px}
-  .adds label{flex:1;height:42px;border-radius:99px;border:1.5px solid var(--soft2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;cursor:pointer}
-  .adds label:active{background:var(--soft)}
-  .adds input{display:none}
-  .grid{columns:2;column-gap:10px}
-  @media (min-width:600px){ .grid{columns:3} }
-  .tile{position:relative;display:block;width:100%;break-inside:avoid;margin:0 0 10px;background:var(--soft);border-radius:20px;overflow:hidden;padding:14px}
-  .grid.looks .tile{padding:0}
-  .tile img{display:block;width:100%;height:auto;mix-blend-mode:multiply;border-radius:8px}
-  .grid.looks .tile img{mix-blend-mode:normal;border-radius:0}
-  .tile:active{transform:scale(.98)}
-  .badge{position:absolute;left:10px;bottom:10px;font-size:11px;font-weight:600;background:#fff;border-radius:99px;padding:3px 9px}
-  .badge.work{color:var(--ink)}
+  /* ---------- outfit view ---------- */
+  #view-outfit.on{display:flex;flex-direction:column;height:calc(100vh - var(--tabh) - var(--sb));height:calc(100dvh - var(--tabh) - var(--sb));min-height:440px}
+  .stage{position:relative;flex:1;min-height:230px;background:var(--paper);border-radius:28px;overflow:hidden;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:box-shadow .15s}
+  .board{position:absolute;left:50%;top:50%;height:92%;aspect-ratio:3/4;max-width:94%;transform:translate(-50%,-50%);background:var(--paper)}
+  .piece{position:absolute;object-fit:contain;mix-blend-mode:multiply;transition:opacity .15s,transform .2s var(--ease)}
+  .stage .piece{cursor:grab;touch-action:none}
+  .piece.dragging{opacity:.2}
+  .piece.flash{animation:pop .35s var(--ease)}
+  @keyframes pop{50%{transform:scale(1.06)}}
+  #stageImg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  .stage-seg{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:8;background:rgba(255,255,255,.75);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  .stage-seg button{height:34px;padding:0 14px;font-size:13px}
+  .stage-ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;gap:6px;color:var(--muted);font-size:14px;line-height:1.5}
+  .stage-ph b{color:var(--ink);font-size:19px;letter-spacing:-.02em}
+  .stage-ph .btn{margin-top:12px}
+  .stage.dnd-add{box-shadow:inset 0 0 0 2px var(--line2)}
+  .stage.dnd-add.over{box-shadow:inset 0 0 0 3px var(--ink)}
+  .stage.dnd-remove:not(.over){box-shadow:inset 0 0 0 3px var(--danger)}
+  .drop-hint{position:absolute;bottom:14px;left:50%;transform:translate(-50%,8px);background:var(--ink);color:#fff;padding:9px 16px;border-radius:99px;font-size:13px;font-weight:600;opacity:0;transition:.2s var(--ease);pointer-events:none;z-index:9;white-space:nowrap}
+  .stage.dnd-add .drop-hint,.stage.dnd-remove .drop-hint{opacity:1;transform:translate(-50%,0)}
+  .busy{position:absolute;inset:0;z-index:10;background:rgba(241,240,237,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;font-weight:600}
+  .busy small{color:var(--muted);font-weight:500;font-size:13px}
+  .busy .btn{margin-top:12px}
+  .spin{width:28px;height:28px;border-radius:50%;border:2.5px solid var(--line2);border-top-color:var(--ink);animation:sp .8s linear infinite;margin-bottom:8px}
+  .spin.sm{width:18px;height:18px;border-width:2px;margin:0}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .actions{display:flex;gap:8px;align-items:center;padding:12px 0}
+  @media (max-height:680px){ .stage{min-height:170px} #view-outfit .vh{min-height:0;padding-bottom:8px} #view-outfit .vh h1{font-size:22px} #view-outfit .sub{display:none} .actions{padding:8px 0} .card{width:74px;height:90px} .tray-empty{height:90px} .chips{padding-bottom:8px} }
+  .actions .btn{flex:1;min-width:0;padding:0 14px}
+  @media (max-width:360px){ .round{width:44px;height:44px} .actions{gap:6px} .actions .btn{font-size:14px} }
+
+  .tray{padding-bottom:10px}
+  .tray-row{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding:2px 16px 4px;margin:0 -16px;touch-action:pan-x;scroll-padding:0 16px}
+  .tray-row::-webkit-scrollbar{display:none}
+  .card{flex:none;width:86px;height:108px;border-radius:18px;background:var(--paper);position:relative;padding:8px;border:2px solid transparent;transition:border-color .15s,transform .12s var(--ease);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  .card:active{transform:scale(.96)}
+  .card img{width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply;pointer-events:none}
+  .card.on{border-color:var(--ink)}
+  .card.dragging{opacity:.35}
+  .tick{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center}
+  .tick .i{width:13px;height:13px;stroke-width:2.6}
+  .card.alt{background:transparent;border:1.5px dashed var(--line2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:600;color:var(--muted)}
+  .card .proc{position:absolute;inset:auto 6px 6px auto}
+  .tray-empty{display:flex;align-items:center;justify-content:space-between;gap:12px;height:108px;padding:0 18px;border-radius:18px;border:1.5px dashed var(--line2);color:var(--muted);font-size:14px;flex:1}
+  .drag-ghost{position:fixed;left:0;top:0;z-index:60;pointer-events:none;width:96px;height:96px;object-fit:contain;background:var(--surface);border-radius:18px;padding:8px;box-shadow:0 12px 32px rgba(0,0,0,.18);transition:opacity .15s}
+  .drag-ghost.rm{opacity:.55;box-shadow:0 0 0 3px var(--danger),0 12px 32px rgba(0,0,0,.18)}
+
+  /* ---------- wardrobe ---------- */
+  .group{margin-bottom:22px}
+  .group-h{display:flex;align-items:center;justify-content:space-between;margin:4px 0 10px}
+  .group-h h2{font-size:17px;font-weight:700;letter-spacing:-.02em;margin:0}
+  .group-h h2 span{color:var(--muted);font-weight:500;font-size:14px;margin-left:6px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  @media (max-width:340px){ .grid{grid-template-columns:repeat(2,1fr)} }
+  .tile{position:relative;aspect-ratio:1;background:var(--paper);border-radius:18px;padding:10px;overflow:hidden;transition:transform .12s var(--ease)}
+  .tile:active{transform:scale(.97)}
+  .tile img{width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply}
+  .tile.add{background:transparent;border:1.5px dashed var(--line2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--muted);font-size:13px;font-weight:600}
+  .badge{position:absolute;left:8px;bottom:8px;font-size:11px;font-weight:600;background:var(--surface);border-radius:99px;padding:3px 8px;display:inline-flex;align-items:center;gap:5px}
   .badge.err{color:var(--danger)}
-  .hint{color:var(--muted);font-size:12.5px;line-height:1.5;margin:8px 6px 14px}
-  .blank{text-align:center;color:var(--muted);padding:60px 20px;line-height:1.5;font-size:14px;column-span:all}
+  .tile .tick{top:8px;right:8px}
+  .empty{text-align:center;color:var(--muted);padding:56px 24px;line-height:1.5;font-size:15px}
+  .empty b{display:block;color:var(--ink);font-size:19px;letter-spacing:-.02em;margin-bottom:4px}
+  .empty .btn{margin-top:18px}
+  .hint{color:var(--muted);font-size:13px;line-height:1.5;margin:4px 2px 18px}
 
-  /* settings */
-  .card{background:var(--soft);border-radius:var(--r);padding:18px;margin-bottom:10px}
-  .card h3{margin:0 0 4px;font-size:16px;letter-spacing:-.01em}
-  .card p{margin:0 0 14px;color:var(--muted);font-size:13px;line-height:1.5}
-  .me{display:flex;gap:14px;align-items:center}
-  .me .pic{width:84px;height:112px;border-radius:16px;background:#fff;overflow:hidden;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center}
-  .me .pic img{width:100%;height:100%;object-fit:cover}
-  .card .btn.sm{background:#fff}
-  .field{width:100%;height:46px;border-radius:14px;border:0;padding:0 14px;background:#fff;margin-bottom:8px;outline:none}
-  .field:focus{box-shadow:0 0 0 2px var(--ink)}
-  a{color:var(--ink);font-weight:600}
+  /* ---------- looks ---------- */
+  .looks{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .look{position:relative;aspect-ratio:3/4;background:var(--paper);border-radius:20px;overflow:hidden;transition:transform .12s var(--ease)}
+  .look:active{transform:scale(.98)}
+  .look > img{width:100%;height:100%;object-fit:cover}
+  .look .board{height:90%}
+  .look .badge{left:10px;bottom:10px}
 
-  /* tabbar: floating pill */
-  .tabs{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--sb) + 12px);z-index:10;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:99px;box-shadow:0 4px 24px rgba(0,0,0,.12);display:flex;gap:4px;padding:6px}
-  .tabs button{width:54px;height:46px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-size:0;color:var(--muted)}
-  .tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
-  .tabs button.on{color:#fff;background:var(--ink)}
+  /* ---------- me ---------- */
+  .card-s{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:18px;margin-bottom:12px}
+  .card-s h2{margin:0 0 4px;font-size:17px;letter-spacing:-.02em}
+  .card-s p{margin:0 0 14px;color:var(--muted);font-size:14px;line-height:1.5}
+  .me-row{display:flex;gap:16px;align-items:center}
+  .me-pic{width:96px;aspect-ratio:3/4;border-radius:16px;background:var(--paper);overflow:hidden;flex:none;display:grid;place-items:center;color:var(--muted)}
+  .me-pic img{width:100%;height:100%;object-fit:cover}
+  .me-row .col{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0}
+  .tips{margin:12px 0 0;padding:0;list-style:none;color:var(--muted);font-size:13px;line-height:1.5}
+  .tips li{padding-left:16px;position:relative}.tips li::before{content:"·";position:absolute;left:4px;font-weight:700}
+  .field{width:100%;height:48px;border-radius:14px;border:1px solid var(--line);padding:0 14px;background:var(--bg);margin-bottom:8px;outline:none;font-size:16px;color:var(--ink)}
+  .field:focus{border-color:var(--ink)}
+  .lbl{display:block;font-size:13px;font-weight:600;margin:4px 2px 6px}
+  .status{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:10px}
+  .status::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
+  .status.ok::before{background:#2e9e5b}
+  details{border-top:1px solid var(--line);margin-top:14px;padding-top:4px}
+  summary{list-style:none;cursor:pointer;height:44px;display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:14px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";font-size:20px;font-weight:400;color:var(--muted)}
+  details[open] summary::after{content:"–"}
 
-  /* sheet */
-  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:20;display:none;align-items:flex-end;justify-content:center}
-  .scrim.on{display:flex}
-  .sheet{background:#fff;width:100%;max-width:560px;border-radius:28px 28px 0 0;padding:10px 16px calc(var(--sb) + 18px);max-height:92vh;overflow:auto;animation:up .25s ease}
-  .sheet::before{content:"";display:block;width:36px;height:4px;border-radius:4px;background:var(--soft2);margin:0 auto 12px}
-  @keyframes up{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
-  .sheet .big{background:var(--soft);border-radius:var(--r);display:flex;align-items:center;justify-content:center;height:46vh;overflow:hidden;margin-bottom:12px;padding:16px}
-  .sheet .big img{max-width:100%;max-height:100%;object-fit:contain;mix-blend-mode:multiply;border-radius:10px}
-  .sheet .stack{display:flex;flex-direction:column;gap:8px}
-  .sheet .rowb{display:flex;gap:8px}
-  .sheet .rowb .btn.sm{background:var(--soft)}
-  .sheet .rowb .btn.sm.primary{background:var(--ink)}
-  .sheet h3{margin:6px 4px 8px;font-weight:700;font-size:20px;letter-spacing:-.02em}
-  .sheet .msg{color:var(--muted);line-height:1.5;margin:0 4px 16px;font-size:14px}
-  .toast{position:fixed;left:50%;top:calc(var(--st) + 14px);transform:translateX(-50%) translateY(-16px);opacity:0;background:var(--ink);color:#fff;padding:11px 18px;border-radius:99px;font-size:14px;font-weight:500;z-index:30;transition:.25s;max-width:90vw;text-align:center;pointer-events:none}
-  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
-  @media (min-width:700px){ main{max-width:560px;margin:0 auto} }
+  /* ---------- tab bar ---------- */
+  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;height:calc(var(--tabh) + var(--sb));padding-bottom:var(--sb);background:rgba(250,250,249,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line);display:flex;justify-content:center}
+  .tabs button{flex:1;max-width:140px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:600;color:var(--muted);transition:color .15s}
+  .tabs button.on{color:var(--ink)}
+  .tabs button .i{width:24px;height:24px}
+  .tabs button.on .i{stroke-width:2.1}
+
+  /* ---------- sheet ---------- */
+  .scrim{position:fixed;inset:0;z-index:30;background:rgba(17,17,17,0);transition:background .24s var(--ease);display:flex;align-items:flex-end;justify-content:center;overscroll-behavior:contain}
+  .scrim.on{background:rgba(17,17,17,.38)}
+  .sheet{position:relative;background:var(--surface);width:100%;max-width:560px;border-radius:28px 28px 0 0;padding:0 18px calc(var(--sb) + 18px);max-height:90vh;max-height:90dvh;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;transform:translateY(100%);transition:transform .28s var(--ease);outline:none}
+  .scrim.on .sheet{transform:none}
+  .sheet.drag{transition:none}
+  .grab{height:26px;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab;position:sticky;top:0;background:var(--surface);z-index:2;margin:0 -18px}
+  .grab::before{content:"";width:40px;height:5px;border-radius:5px;background:var(--line2)}
+  .sh-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 -6px 10px 0;touch-action:none}
+  .sh-head h2{margin:0;font-size:21px;font-weight:700;letter-spacing:-.025em}
+  .sh-head .icon-btn{background:var(--paper)}
+  .sheet .msg{color:var(--muted);line-height:1.5;margin:0 0 18px;font-size:15px}
+  .sheet .row2{display:flex;gap:8px}.sheet .row2 .btn{flex:1}
+  .stack{display:flex;flex-direction:column;gap:8px}
+  .media{background:var(--paper);border-radius:22px;height:min(46vh,400px);height:min(46dvh,400px);display:flex;align-items:center;justify-content:center;padding:18px;margin-bottom:12px;position:relative;overflow:hidden}
+  .media > img{max-width:100%;max-height:100%;object-fit:contain;mix-blend-mode:multiply}
+  .media.photo{padding:0}.media.photo > img{mix-blend-mode:normal;width:100%;height:100%}
+  .media .board{height:94%}
+  .media .seg{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.75);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:3}
+  .sec-l{font-size:13px;font-weight:600;color:var(--muted);margin:16px 2px 8px}
+  .cat-pick{display:flex;flex-wrap:wrap;gap:6px}
+  .cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .cat-grid .btn{height:56px;justify-content:flex-start;padding:0 18px;border-radius:18px}
+  .menu{display:flex;flex-direction:column;margin:0 -6px}
+  .menu button,.menu a{display:flex;align-items:center;gap:14px;min-height:60px;padding:8px 10px;border-radius:16px;text-align:left;text-decoration:none;font-weight:600}
+  .menu button:active,.menu a:active{background:var(--paper)}
+  .menu .ico{width:40px;height:40px;border-radius:12px;background:var(--paper);display:grid;place-items:center;flex:none}
+  .menu small{display:block;color:var(--muted);font-weight:500;font-size:13px;margin-top:1px}
+  .menu .danger{color:var(--danger)}
+
+  /* ---------- snackbar ---------- */
+  .snack{position:fixed;left:50%;bottom:calc(var(--tabh) + var(--sb) + 12px);z-index:50;transform:translate(-50%,16px);opacity:0;pointer-events:none;background:var(--ink);color:#fff;border-radius:16px;padding:6px 6px 6px 16px;min-height:48px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;width:max-content;max-width:calc(100vw - 32px);box-shadow:0 8px 28px rgba(0,0,0,.2);transition:.24s var(--ease)}
+  .snack.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+  .snack span{padding:6px 0}
+  .snack button{flex:none;height:36px;padding:0 14px;border-radius:12px;font-weight:700;color:#fff;background:rgba(255,255,255,.14)}
+  .snack:not(:has(button)){padding-right:16px}
+
+  @media (min-width:700px){
+    .scrim{align-items:center}
+    .sheet{border-radius:28px;max-height:86vh;padding-bottom:22px}
+  }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
 </style>
 </head>
 <body>
-<header><h1>Outfits</h1><small id="hdrInfo"></small></header>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-shirt" viewBox="0 0 24 24"><path d="M8 3 4 6l2 4 2-1v12h8V9l2 1 2-4-4-3c-1 1.5-2.3 2-4 2s-3-.5-4-2z"/></symbol>
+  <symbol id="i-hanger" viewBox="0 0 24 24"><path d="M12 7.5a2.2 2.2 0 1 1 2.2-2.2c0 1.1-1 1.6-2.2 2.4V9.5l8.8 6.2a1 1 0 0 1-.6 1.8H3.8a1 1 0 0 1-.6-1.8L12 9.5"/></symbol>
+  <symbol id="i-looks" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="10" rx="2"/><rect x="13" y="3" width="8" height="7" rx="2"/><rect x="13" y="12" width="8" height="9" rx="2"/><rect x="3" y="15" width="8" height="6" rx="2"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></symbol>
+  <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.4 5a5.2 5.2 0 0 0-7.4 0L12 6l-1-1a5.2 5.2 0 0 0-7.4 7.4l1 1L12 20.8l7.4-7.4 1-1a5.2 5.2 0 0 0 0-7.4z"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M20 20H9l-5-5a1.5 1.5 0 0 1 0-2.1L13.9 3a1.5 1.5 0 0 1 2.1 0L21 8a1.5 1.5 0 0 1 0 2.1L11 20M8 9l7 7"/></symbol>
+</svg>
 
 <main>
   <!-- OUTFIT -->
-  <section class="view on" id="view-outfit">
-    <div class="seg mode" id="modeSeg"><button data-m="flat" class="on">Flat lay</button><button data-m="me">On me</button></div>
+  <section class="view on" id="view-outfit" aria-label="Outfit">
+    <header class="vh">
+      <div><h1>Outfit</h1><p class="sub" id="outfitSub"></p></div>
+    </header>
     <div class="stage" id="stage">
-      <div class="ph" id="stagePh"></div>
-      <div class="flat" id="flat"><img class="f-top" alt="Top"><img class="f-bottom" alt="Bottom"><img class="f-shoes" alt="Shoes"></div>
-      <img id="stageImg" alt="" hidden>
-      <span class="chip ok" id="stageChip" hidden>✓ Saved look</span>
-      <div class="busy" id="stageBusy"><div class="spin"></div><div id="busyText">Dressing you up…</div></div>
+      <div class="board" id="board"></div>
+      <img id="stageImg" alt="You wearing this outfit" hidden>
+      <div class="stage-ph" id="stagePh" hidden></div>
+      <div class="seg stage-seg" id="stageSeg" hidden><button data-m="board">Pieces</button><button data-m="me">On me</button></div>
+      <div class="drop-hint" id="dropHint"></div>
+      <div class="busy" id="stageBusy" hidden><div class="spin"></div><div>Styling you…</div><small>Usually 10–30 seconds</small><button class="btn sm" id="btnCancelGen">Cancel</button></div>
     </div>
     <div class="actions">
-      <button class="btn" id="btnShuffle">⤨ Shuffle</button>
-      <button class="btn primary" id="btnTry">Show on me</button>
+      <button class="round" id="btnShuffle" aria-label="Shuffle outfit"><svg class="i"><use href="#i-shuffle"/></svg></button>
+      <button class="round" id="btnSave" aria-label="Save to Looks"><svg class="i"><use href="#i-heart"/></svg></button>
+      <button class="round" id="btnMore" aria-label="More options"><svg class="i"><use href="#i-more"/></svg></button>
+      <button class="btn primary" id="btnTry"></button>
     </div>
-    <div id="rows"></div>
+    <div class="tray">
+      <div class="chips" id="trayChips" role="tablist" aria-label="Categories"></div>
+      <div class="tray-row" id="trayRow"></div>
+    </div>
   </section>
 
   <!-- WARDROBE -->
-  <section class="view" id="view-wardrobe">
-    <div class="seg" id="seg">
-      <button data-f="all" class="on">All</button><button data-f="top">Tops</button><button data-f="bottom">Bottoms</button><button data-f="shoes">Shoes</button>
-    </div>
-    <div class="adds">
-      <label>+ Top<input type="file" accept="image/*" multiple data-cat="top"></label>
-      <label>+ Bottom<input type="file" accept="image/*" multiple data-cat="bottom"></label>
-      <label>+ Shoes<input type="file" accept="image/*" multiple data-cat="shoes"></label>
-    </div>
-    <p class="hint">Backgrounds are removed right on your phone, free. The first time it downloads a small AI model (about 40 MB). Tap an item to fix, move or delete it.</p>
-    <div class="grid" id="wardGrid"></div>
+  <section class="view" id="view-wardrobe" aria-label="Wardrobe">
+    <header class="vh">
+      <div><h1>Wardrobe</h1><p class="sub" id="wardSub"></p></div>
+      <button class="btn primary sm" id="btnAdd"><svg class="i s"><use href="#i-plus"/></svg>Add</button>
+    </header>
+    <div class="chips" id="wardChips"></div>
+    <div id="wardBody"></div>
   </section>
 
   <!-- LOOKS -->
-  <section class="view" id="view-looks">
-    <p class="hint">Every outfit you've generated. Tap one to open it.</p>
-    <div class="grid looks" id="looksGrid"></div>
+  <section class="view" id="view-looks" aria-label="Looks">
+    <header class="vh"><div><h1>Looks</h1><p class="sub" id="looksSub"></p></div></header>
+    <div id="looksBody"></div>
   </section>
 
-  <!-- SETTINGS -->
-  <section class="view" id="view-settings">
-    <div class="card">
-      <h3>Your photo</h3>
-      <p>One full-body photo: standing straight, facing the camera, head to feet in frame, plain background, fitted clothes.</p>
-      <div class="me">
-        <div class="pic" id="mePic">No photo yet</div>
-        <div style="flex:1">
-          <label class="btn sm" style="display:inline-flex;margin-bottom:8px">Choose photo<input type="file" accept="image/*" id="meInput" hidden></label>
+  <!-- ME -->
+  <section class="view" id="view-me" aria-label="Me">
+    <header class="vh"><div><h1>Me</h1><p class="sub">Your photo and settings</p></div></header>
+    <div class="card-s">
+      <h2>Your photo</h2>
+      <div class="me-row">
+        <div class="me-pic" id="mePic"></div>
+        <div class="col">
+          <button class="btn primary" id="btnMePhoto">Choose photo</button>
+          <button class="btn danger" id="btnMeRemove" hidden>Remove</button>
         </div>
       </div>
+      <ul class="tips"><li>Full body, head to feet in frame</li><li>Standing straight, facing the camera</li><li>Plain background, fitted clothes</li></ul>
     </div>
-    <div class="card">
-      <h3>Gemini API key <span style="font-weight:500;color:var(--muted)">(optional)</span></h3>
-      <p>Not needed if you use the free Gemini app. Only for one-tap try-ons inside this app. Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>. Gemini's image model has no free tier, so turn on billing there (a few cents per look; each look is saved, so you pay once per outfit). The key stays on this device only.</p>
-      <input class="field" id="keyInput" type="password" placeholder="Paste key (AIza…)" autocomplete="off">
-      <input class="field" id="modelInput" placeholder="gemini-2.5-flash-image" autocomplete="off" spellcheck="false">
-      <button class="btn primary" id="btnSaveKey" style="width:100%">Save</button>
-    </div>
-    <div class="card">
-      <h3>Storage</h3>
-      <p id="storageInfo">Everything is saved in this browser on this device.</p>
-      <button class="btn danger" id="btnClearLooks" style="width:100%">Delete all generated looks</button>
+    <div class="card-s" id="genCard"></div>
+    <div class="card-s">
+      <h2>Storage</h2>
+      <p id="storageInfo">Everything is saved in this browser, on this device only.</p>
+      <button class="btn danger block" id="btnClearLooks">Delete all try-on photos</button>
     </div>
   </section>
 </main>
 
-<nav class="tabs" id="tabs">
-  <button data-v="outfit" class="on"><svg viewBox="0 0 24 24"><path d="M8 3l-4 3 2 4 2-1v12h8V9l2 1 2-4-4-3c-1 1.5-2.3 2-4 2s-3-.5-4-2z"/></svg>Outfit</button>
-  <button data-v="wardrobe"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M12 3v18M9.5 11v2M14.5 11v2"/></svg>Wardrobe</button>
-  <button data-v="looks"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="10" rx="1.5"/><rect x="13" y="3" width="8" height="7" rx="1.5"/><rect x="13" y="12" width="8" height="9" rx="1.5"/><rect x="3" y="15" width="8" height="6" rx="1.5"/></svg>Looks</button>
-  <button data-v="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Me</button>
+<nav class="tabs" id="tabs" aria-label="Sections">
+  <button data-v="outfit" class="on"><svg class="i"><use href="#i-shirt"/></svg>Outfit</button>
+  <button data-v="wardrobe"><svg class="i"><use href="#i-hanger"/></svg>Wardrobe</button>
+  <button data-v="looks"><svg class="i"><use href="#i-looks"/></svg>Looks</button>
+  <button data-v="me"><svg class="i"><use href="#i-user"/></svg>Me</button>
 </nav>
 
+<input type="file" accept="image/*" multiple id="filePick" hidden>
+<input type="file" accept="image/*" id="meInput" hidden>
 <input type="file" accept="image/*" id="resultInput" hidden>
-<div class="scrim" id="scrim"><div class="sheet" id="sheet"></div></div>
-<div class="toast" id="toast"></div>
+<div class="scrim" id="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true" tabindex="-1"></div></div>
+<div class="snack" id="snack" role="status" aria-live="polite"></div>
 
 <script>
 (() => {
 'use strict';
-const CATS = [['top','Top'],['bottom','Bottom'],['shoes','Shoes']];
-const $ = s => document.querySelector(s);
-const el = (tag, attrs={}, ...kids) => { const e=document.createElement(tag); for(const [k,v] of Object.entries(attrs)){ if(k==='class')e.className=v; else if(k.startsWith('on'))e.addEventListener(k.slice(2),v); else if(v!==false&&v!=null)e.setAttribute(k,v);} kids.flat().forEach(c=>c!=null&&e.append(c)); return e; };
 
-/* ---------- storage (IndexedDB) ---------- */
+/* Try-on service URL (the Cloudflare Worker in /worker). Leave empty until deployed;
+   it can also be set per device in Me → Advanced. */
+const BUILTIN_ENDPOINT = '';
+
+const CATS = [
+  {id:'top',    label:'Tops',        one:'Top',       prompt:'the top (shirt, t-shirt, blouse or sweater)'},
+  {id:'bottom', label:'Bottoms',     one:'Bottom',    prompt:'the bottoms (trousers, jeans, skirt or shorts)'},
+  {id:'dress',  label:'Dresses',     one:'Dress',     prompt:'the one-piece (dress or jumpsuit); it replaces both the top and the bottoms'},
+  {id:'outer',  label:'Outerwear',   one:'Outerwear', prompt:'the outer layer (jacket or coat), worn over the rest of the outfit'},
+  {id:'shoes',  label:'Shoes',       one:'Shoes',     prompt:'the shoes'},
+  {id:'bag',    label:'Bags',        one:'Bag',       prompt:'the bag, carried or worn naturally'},
+  {id:'acc',    label:'Accessories', one:'Accessory', prompt:'an accessory (hat, jewelry, belt, scarf or sunglasses), worn naturally', multi:3},
+];
+const CAT = Object.fromEntries(CATS.map(c=>[c.id,c]));
+const catIdx = id => CATS.findIndex(c=>c.id===id);
+
+/* ---------- dom helpers ---------- */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+function el(tag, attrs={}, ...kids){
+  const e=document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs)){
+    if(v===false||v==null) continue;
+    if(k==='class') e.className=v;
+    else if(k.startsWith('on')) e.addEventListener(k.slice(2),v);
+    else e.setAttribute(k,v===true?'':v);
+  }
+  kids.flat(9).forEach(c=>c!=null&&c!==false&&e.append(c));
+  return e;
+}
+function icon(n, cls='i'){
+  const NS='http://www.w3.org/2000/svg', s=document.createElementNS(NS,'svg'), u=document.createElementNS(NS,'use');
+  s.setAttribute('class',cls); s.setAttribute('aria-hidden','true'); u.setAttribute('href','#i-'+n); s.append(u); return s;
+}
+const B = (label, onclick, cls='', ic) => el('button',{class:'btn '+cls, onclick}, ic?icon(ic,'i s'):null, label);
+const plural = (n, w) => `${n} ${w}${n===1?'':'s'}`;
+
+/* ---------- storage ---------- */
 let db;
 function openDB(){
   return new Promise((res,rej)=>{
@@ -240,51 +377,112 @@ function openDB(){
   });
 }
 const tx = (store, mode, fn) => new Promise((res,rej)=>{
-  const t = db.transaction(store, mode); const s = t.objectStore(store); const out = fn(s);
+  if(!db) return res(undefined);
+  const t = db.transaction(store, mode); const out = fn(t.objectStore(store));
   t.oncomplete = () => res(out && 'result' in out ? out.result : undefined);
   t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
 });
 const put = (store,val,key) => tx(store,'readwrite',s=>s.put(val,key));
 const get = (store,key) => tx(store,'readonly',s=>s.get(key));
-const getAll = (store) => tx(store,'readonly',s=>s.getAll());
+const getAll = store => tx(store,'readonly',s=>s.getAll());
 const del = (store,key) => tx(store,'readwrite',s=>s.delete(key));
-
 const LS = { get(k,d=''){ try{return localStorage.getItem(k)??d}catch{return d} }, set(k,v){ try{localStorage.setItem(k,v)}catch{} } };
-const apiKey = () => LS.get('op_key').trim();
-const model = () => LS.get('op_model').trim() || 'gemini-2.5-flash-image';
+
+const cfg = {
+  get key(){ return LS.get('op_key').trim(); },
+  get model(){ return LS.get('op_model').trim() || 'gemini-2.5-flash-image'; },
+  get endpoint(){ return (LS.get('op_endpoint').trim() || BUILTIN_ENDPOINT).replace(/\/+$/,''); },
+  get code(){ return LS.get('op_code').trim(); },
+  get mode(){
+    if(LS.get('op_gen')==='key' && this.key) return 'key';
+    if(this.endpoint) return 'service';
+    return this.key ? 'key' : null;
+  },
+};
 
 /* ---------- state ---------- */
 let items = [];            // {id,cat,original,product,useOriginal,status,error,created}
-const looks = new Map();   // key -> {key,image,created,top,bottom,shoes}
+const looks = new Map();   // key -> {key,items:[ids],image:Blob|null,created,saved}
 let me = null;             // Blob
-const sel = {top:null,bottom:null,shoes:null};
-const pending = new Set(); // look keys being generated
+let outfit = (()=>{ try{ return JSON.parse(LS.get('op_outfit','[]'))||[]; }catch{ return []; } })();
+let trayCat = CAT[LS.get('op_tray')] ? LS.get('op_tray') : 'top';
+let stageMode = 'board';
 let wardFilter = 'all';
-let mode = 'flat';
-function setMode(m){ mode=m; document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===m)); updateStage(); }
-document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+const pending = new Map(); // look key -> AbortController
 
 const urlCache = new WeakMap();
 const url = blob => { if(!blob) return ''; let u=urlCache.get(blob); if(!u){u=URL.createObjectURL(blob);urlCache.set(blob,u);} return u; };
+const itemOf = id => items.find(i=>i.id===id);
 const shown = it => (!it.useOriginal && it.product) || it.original;
-const byCat = c => items.filter(i=>i.cat===c).sort((a,b)=>a.created-b.created);
-const keyOf = (t,b,s) => `${t}|${b}|${s}`;
-const selKey = () => (sel.top&&sel.bottom&&sel.shoes) ? keyOf(sel.top,sel.bottom,sel.shoes) : null;
+const byCat = c => items.filter(i=>i.cat===c).sort((a,b)=>b.created-a.created);
+const lookKey = ids => ids.length ? [...ids].sort().join('|') : null;
+const curKey = () => lookKey(outfit);
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const isSaved = l => !!(l && (l.saved || l.image));
 
-/* ---------- ui helpers ---------- */
-let toastT;
-function toast(msg, ms=2600){ const t=$('#toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),ms); }
-function openSheet(nodes){ const s=$('#sheet'); s.replaceChildren(...nodes); $('#scrim').classList.add('on'); }
-function closeSheet(){ $('#scrim').classList.remove('on'); }
+/* ---------- snackbar ---------- */
+let snackT;
+function snack(msg, action, fn, ms){
+  const s=$('#snack');
+  s.replaceChildren(el('span',{},msg), action ? el('button',{onclick:()=>{ hideSnack(); fn(); }},action) : null);
+  s.classList.add('on'); clearTimeout(snackT);
+  snackT=setTimeout(hideSnack, ms || (action?5000:2600));
+}
+const hideSnack = () => $('#snack').classList.remove('on');
+const toast = (m, ms) => snack(m, null, null, ms);
+
+/* ---------- sheet (bottom sheet with scroll lock + swipe to close) ---------- */
+let sheetCb=null, sheetTimer=null, locked=false, lockY=0;
+function lockScroll(){ if(locked) return; locked=true; lockY=window.scrollY; document.body.style.top=`-${lockY}px`; document.documentElement.classList.add('locked'); }
+function unlockScroll(){ if(!locked) return; locked=false; document.documentElement.classList.remove('locked'); document.body.style.top=''; window.scrollTo(0,lockY); }
+function openSheet(nodes, opts={}){
+  const sc=$('#scrim'), sh=$('#sheet');
+  clearTimeout(sheetTimer);
+  const head = opts.title ? el('div',{class:'sh-head'}, el('h2',{},opts.title),
+    el('button',{class:'icon-btn','aria-label':'Close',onclick:closeSheet}, icon('x'))) : null;
+  sh.replaceChildren(el('div',{class:'grab'}), head, ...nodes.flat().filter(Boolean));
+  sh.style.transform=''; sh.scrollTop=0;
+  sheetCb = opts.onClose || null;
+  lockScroll();
+  if(!sc.classList.contains('on')){ sc.hidden=false; void sc.offsetWidth; sc.classList.add('on'); }
+  sh.focus({preventScroll:true});
+}
+function closeSheet(){
+  const sc=$('#scrim'); if(!sc.classList.contains('on')) return;
+  sc.classList.remove('on');
+  const cb=sheetCb; sheetCb=null;
+  sheetTimer=setTimeout(()=>{ sc.hidden=true; $('#sheet').style.transform=''; unlockScroll(); }, 260);
+  cb?.();
+}
 $('#scrim').addEventListener('click', e=>{ if(e.target.id==='scrim') closeSheet(); });
-function ask(title, msg, okLabel='Delete'){
-  return new Promise(res=>{
-    openSheet([ el('h3',{},title), el('p',{class:'msg'},msg),
-      el('div',{class:'rowb'},
-        el('button',{class:'btn',onclick:()=>{closeSheet();res(false)}},'Cancel'),
-        el('button',{class:'btn accent',onclick:()=>{closeSheet();res(true)}},okLabel)) ]);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeSheet(); });
+// prevent scroll chaining to the page on iOS when the sheet itself cannot scroll
+$('#scrim').addEventListener('touchmove', e=>{ if(!e.target.closest('.sheet')) e.preventDefault(); }, {passive:false});
+(() => { // swipe down on handle/header to dismiss
+  const sh=$('#sheet'); let y0=null, dy=0, pid=null;
+  sh.addEventListener('pointerdown', e=>{
+    if(!e.target.closest('.grab, .sh-head') || e.target.closest('button')) return;
+    y0=e.clientY; dy=0; pid=e.pointerId; sh.classList.add('drag'); sh.setPointerCapture(pid);
   });
+  sh.addEventListener('pointermove', e=>{ if(y0==null||e.pointerId!==pid) return; dy=Math.max(0,e.clientY-y0); sh.style.transform=`translateY(${dy}px)`; });
+  const end = e=>{ if(y0==null||e.pointerId!==pid) return; y0=null; sh.classList.remove('drag');
+    if(dy>90) closeSheet(); else sh.style.transform=''; };
+  sh.addEventListener('pointerup', end); sh.addEventListener('pointercancel', end);
+})();
+function ask(title, msg, okLabel='Delete', danger=true){
+  return new Promise(res=>{
+    let done=false; const fin=v=>{ if(!done){ done=true; res(v); } };
+    openSheet([ el('h2',{style:'margin:4px 0 8px;font-size:21px;letter-spacing:-.025em'},title), el('p',{class:'msg'},msg),
+      el('div',{class:'row2'}, B('Cancel',()=>{ fin(false); closeSheet(); }), B(okLabel,()=>{ fin(true); closeSheet(); }, danger?'danger-fill':'primary')) ],
+      {onClose:()=>fin(false)});
+  });
+}
+function seg(options, value, onChange, cls=''){
+  const w = el('div',{class:'seg '+cls});
+  for(const [v,l] of options) w.append(el('button',{class:v===value?'on':'', 'data-v':v, onclick:()=>{
+    w.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.v===v)); onChange(v);
+  }}, l));
+  return w;
 }
 
 /* ---------- images ---------- */
@@ -299,65 +497,22 @@ async function shrink(blob, max=1280, q=0.9){
 }
 const toB64 = blob => new Promise((res,rej)=>{ const f=new FileReader(); f.onload=()=>res(String(f.result).split(',')[1]); f.onerror=()=>rej(f.error); f.readAsDataURL(blob); });
 function b64ToBlob(b64, mime='image/png'){ const bin=atob(b64); const a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i); return new Blob([a],{type:mime}); }
-const imgPart = async blob => ({inline_data:{mime_type:blob.type||'image/jpeg', data: await toB64(blob)}});
+function download(blob, name){ const a=el('a',{href:URL.createObjectURL(blob),download:name}); document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000); }
 
-/* ---------- Gemini ---------- */
-async function gemini(parts, aspect){
-  const key = apiKey();
-  if(!key) throw new Error('Add your Gemini API key in the Me tab first.');
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model())}:generateContent`;
-  const call = async (withConfig) => {
-    const generationConfig = withConfig ? {responseModalities:['IMAGE'], imageConfig:{aspectRatio:aspect}} : {responseModalities:['TEXT','IMAGE']};
-    const r = await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
-      body: JSON.stringify({contents:[{role:'user',parts}], generationConfig})});
-    const j = await r.json().catch(()=>({}));
-    return {r,j};
-  };
-  let {r,j} = await call(true);
-  if(r.status===400 && !/API key/i.test(j?.error?.message||'')) ({r,j} = await call(false));
-  if(!r.ok){
-    const m = j?.error?.message || `HTTP ${r.status}`;
-    if(r.status===429 && /limit: ?0\b|free_tier/i.test(m)) throw new Error('Gemini image generation has no free tier. Turn on billing for your key in Google AI Studio, then try again.');
-    if(r.status===429) throw new Error('Gemini is busy or your quota is used up. Try again in a minute.');
-    if(r.status===400 && /API key/i.test(m)) throw new Error('That API key was rejected. Check it in the Me tab.');
-    if(r.status===403) throw new Error('Key not allowed for this model: '+m);
-    throw new Error(m);
-  }
-  const cand = j.candidates?.[0];
-  const p = cand?.content?.parts?.find(p=>p.inlineData||p.inline_data);
-  if(!p){
-    const txt = cand?.content?.parts?.find(p=>p.text)?.text;
-    const why = j.promptFeedback?.blockReason || cand?.finishReason;
-    throw new Error(txt ? 'Gemini replied: '+txt.slice(0,160) : 'No image returned'+(why?` (${why})`:'')+'. Try again.');
-  }
-  const d = p.inlineData || p.inline_data;
-  return b64ToBlob(d.data, d.mimeType || d.mime_type || 'image/png');
-}
-
-const TRYON_PROMPT = `Create a realistic full-body photograph of the SAME person shown in the first image, now wearing exactly the three clothing items shown in the other images.
-Rules:
-- Keep the person's identity identical: same face, facial features, hair, skin tone, body shape and proportions. Do not beautify or change them.
-- Dress them in exactly these items: the top, the bottom and the shoes. Reproduce each item's exact color, pattern, print, logos and details. Remove their original outfit. Do not add extra garments, jackets or accessories.
-- Natural, flattering fit for the person's body. Tuck or layer the top the way it would normally be worn.
-- Full body visible from head to feet including both shoes, standing in a relaxed natural pose, facing the camera.
-- Plain light-grey studio background, soft even lighting, sharp photographic quality.`;
-
-/* on-device background removal */
-let bgLib = null, lastPct = -1;
+/* ---------- on-device background removal ---------- */
+let bgLib=null, bgToast=false;
 const getBg = () => bgLib ||= import('./bg.js');
 async function framed(cutBlob){
   const img = await loadImg(cutBlob);
-  const W=img.naturalWidth, H=img.naturalHeight;
-  const sc = Math.min(1, 512/Math.max(W,H));
-  const a = document.createElement('canvas'); a.width=Math.max(1,Math.round(W*sc)); a.height=Math.max(1,Math.round(H*sc));
+  const W=img.naturalWidth, H=img.naturalHeight, sc=Math.min(1,512/Math.max(W,H));
+  const a=document.createElement('canvas'); a.width=Math.max(1,Math.round(W*sc)); a.height=Math.max(1,Math.round(H*sc));
   const ag=a.getContext('2d'); ag.drawImage(img,0,0,a.width,a.height);
-  const d = ag.getImageData(0,0,a.width,a.height).data;
+  const d=ag.getImageData(0,0,a.width,a.height).data;
   let x0=a.width,y0=a.height,x1=-1,y1=-1;
   for(let y=0;y<a.height;y++) for(let x=0;x<a.width;x++) if(d[(y*a.width+x)*4+3]>24){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
   if(x1<0) throw new Error('Could not find the item in that photo');
   const bx=x0/sc, by=y0/sc, bw=(x1-x0+1)/sc, bh=(y1-y0+1)/sc;
-  const side = Math.min(1024, Math.round(Math.max(bw,bh)*1.12));
-  const k = side/(Math.max(bw,bh)*1.12);
+  const side=Math.min(1024,Math.round(Math.max(bw,bh)*1.12)), k=side/(Math.max(bw,bh)*1.12);
   const c=document.createElement('canvas'); c.width=c.height=side;
   const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,side,side);
   g.drawImage(img,bx,by,bw,bh,(side-bw*k)/2,(side-bh*k)/2,bw*k,bh*k);
@@ -367,387 +522,650 @@ async function framed(cutBlob){
 async function productShot(blob){
   const {removeBackground} = await getBg();
   const cut = await removeBackground(blob, { model:'isnet_quint8', output:{format:'image/png'},
-    progress:(key)=>{ if(/fetch/.test(key) && lastPct<0){ lastPct=0; toast('Downloading background remover (one time, ~40 MB)…', 6000); } } });
+    progress:key=>{ if(/fetch/.test(key) && !bgToast){ bgToast=true; toast('Downloading the background remover (one time, about 40 MB)…', 6000); } } });
   return framed(cut);
 }
-
-/* cleanup queue */
 let queue = Promise.resolve();
-function queueCleanup(id){
-  queue = queue.then(()=>cleanup(id)).catch(()=>{});
-}
+const queueCleanup = id => { queue = queue.then(()=>cleanup(id)).catch(()=>{}); };
 async function cleanup(id){
-  const it = items.find(i=>i.id===id); if(!it) return;
-  it.status='work'; it.error=''; renderWardrobe();
-  try{
-    it.product = await productShot(it.original); it.status='ok'; it.useOriginal=false;
-    await dropLooksWith(it.id, true);
-  }catch(e){ it.status='err'; it.error=e.message; toast(e.message, 4000); }
-  await save(it); renderAll();
+  const it=itemOf(id); if(!it) return;
+  it.status='work'; it.error=''; renderItemsOnly();
+  try{ it.product=await productShot(it.original); it.status='ok'; it.useOriginal=false; }
+  catch(e){ it.status='err'; it.error=e.message; }
+  if(!itemOf(id)) return;
+  await save(it); collageCache=null; renderItemsOnly();
 }
 const save = it => put('items', it);
 
-async function dropLooksWith(id, silent){
-  for(const [k,l] of [...looks]) if(k.split('|').includes(id)){ looks.delete(k); await del('looks',k); }
-  if(!silent) renderAll();
+/* ---------- outfit rules ---------- */
+const sortIds = ids => ids.slice().sort((a,b)=>catIdx(itemOf(a).cat)-catIdx(itemOf(b).cat));
+function withItem(ids, id){
+  const it=itemOf(id); const removed=[];
+  let next = ids.filter(x=>{
+    if(x===id) return false; const o=itemOf(x); if(!o) return false;
+    const crossClash = (it.cat==='dress' && (o.cat==='top'||o.cat==='bottom')) || ((it.cat==='top'||it.cat==='bottom') && o.cat==='dress');
+    const sameSlot = o.cat===it.cat && !CAT[it.cat].multi;
+    if(crossClash) removed.push(o);
+    return !(crossClash || sameSlot);
+  });
+  const m=CAT[it.cat].multi;
+  if(m){ const same=next.filter(x=>itemOf(x).cat===it.cat); while(same.length>=m){ const drop=same.shift(); next=next.filter(x=>x!==drop); removed.push(itemOf(drop)); } }
+  next.push(id);
+  return {ids:sortIds(next), removed};
+}
+const enforce = ids => ids.filter(itemOf).reduce((acc,id)=>withItem(acc,id).ids, []);
+function setOutfit(ids, undoMsg){
+  const prev=outfit; outfit=ids;
+  LS.set('op_outfit', JSON.stringify(outfit));
+  if(lookKey(prev)!==lookKey(ids)) stageMode = looks.get(curKey())?.image ? 'me' : 'board';
+  renderOutfit();
+  if(undoMsg) snack(undoMsg, 'Undo', ()=>setOutfit(prev));
+}
+function addPiece(id, opts={}){
+  const {ids,removed}=withItem(outfit,id);
+  stageMode='board';
+  setOutfit(ids, removed.length ? `Swapped out ${removed.map(r=>CAT[r.cat].one.toLowerCase()).join(' & ')}` : null);
+  if(opts.flash!==false) requestAnimationFrame(()=>$(`#board [data-id="${id}"]`)?.classList.add('flash'));
+}
+function removePiece(id){
+  const it=itemOf(id);
+  setOutfit(outfit.filter(x=>x!==id), `Removed ${CAT[it?.cat]?.one.toLowerCase()||'item'}`);
+}
+function shuffle(){
+  let cats=[...new Set(outfit.map(id=>itemOf(id)?.cat).filter(Boolean))];
+  if(!cats.length) cats=['top','bottom','shoes'].filter(c=>byCat(c).length);
+  if(!cats.length) return toast('Add some clothes to your wardrobe first');
+  const next=[];
+  for(const c of cats){
+    const list=byCat(c); const cur=outfit.filter(id=>itemOf(id)?.cat===c);
+    const want=Math.max(1,cur.length);
+    const pool=list.length>want ? list.filter(i=>!cur.includes(i.id)) : list;
+    const picks=[...pool].sort(()=>Math.random()-.5).slice(0,want);
+    if(picks.length<want) picks.push(...list.filter(i=>!picks.includes(i)).slice(0,want-picks.length));
+    next.push(...picks.map(i=>i.id));
+  }
+  stageMode='board'; setOutfit(enforce(next));
 }
 
-/* ---------- Gemini app (free, manual) ---------- */
-const QUICK_PROMPT = 'Follow the instructions written at the top of this image.';
-const APP_PROMPT = `In this image, the person is on the left. On the right are a TOP, a BOTTOM and SHOES.
-Create a realistic full-body photo of the SAME person (identical face, hair, skin tone and body shape) wearing exactly these three items, with the same colors, patterns and details. Remove their current outfit and add nothing else.
-Full body from head to feet with both shoes visible, relaxed standing pose facing the camera, plain light-grey studio background, soft lighting, portrait 3:4.`;
-let collage = {key:null, file:null, building:null};
-async function drawContain(g, blob, x, y, w, h, cover){
-  const im = await loadImg(blob); const iw=im.naturalWidth, ih=im.naturalHeight;
-  const sc = cover ? Math.max(w/iw,h/ih) : Math.min(w/iw,h/ih);
-  const dw=iw*sc, dh=ih*sc;
-  g.save(); g.beginPath(); g.rect(x,y,w,h); g.clip();
-  g.drawImage(im, x+(w-dw)/2, y+(h-dh)/2, dw, dh); g.restore();
-  URL.revokeObjectURL(im.src);
-}
-const IMG_INSTRUCTIONS = 'Make a realistic full-body photo of the PERSON on the left wearing exactly the TOP, BOTTOM and SHOES on the right. Keep the same face, hair, skin tone and body. Same colors and details on the clothes, nothing else added. Head to feet visible, standing, facing the camera, plain light-grey background, portrait 3:4.';
-function wrapText(g, text, x, y, maxW, lh){
-  const words=text.split(' '); let line='';
-  for(const w of words){ const t=line?line+' '+w:w; if(g.measureText(t).width>maxW && line){ g.fillText(line,x,y); y+=lh; line=w; } else line=t; }
-  if(line) g.fillText(line,x,y);
-}
-async function buildCollage(k){
-  const [t,b,s] = k.split('|').map(id=>items.find(i=>i.id===id));
-  const HEAD=210;
-  const c=document.createElement('canvas'); c.width=1500; c.height=1200+HEAD;
-  const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height);
-  g.fillStyle='#111'; g.font='600 34px Inter, Helvetica, Arial, sans-serif';
-  wrapText(g, IMG_INSTRUCTIONS, 24, 52, 1450, 44);
-  g.fillStyle='#e5e5e5'; g.fillRect(0,HEAD-14,1500,4);
-  await drawContain(g, me, 0, HEAD, 840, 1200, false);
-  g.fillStyle='#e5e5e5'; g.fillRect(860,HEAD,4,1200);
-  const cells=[[t,'TOP'],[b,'BOTTOM'],[s,'SHOES']];
-  g.font='600 28px Inter, Helvetica, Arial, sans-serif';
-  for(let i=0;i<3;i++){
-    const y=HEAD+i*400;
-    await drawContain(g, shown(cells[i][0]), 900, y+50, 560, 330, false);
-    g.fillStyle='#111'; g.fillText(cells[i][1], 900, y+38);
+/* ---------- flat-lay board ---------- */
+function layout(ids){
+  const P={}; for(const id of ids){ const it=itemOf(id); if(it) (P[it.cat] ||= []).push(it); }
+  const one=c=>P[c]?.[0];
+  let outer=one('outer'); const top=one('top'), bottom=one('bottom'), dress=one('dress'), shoes=one('shoes'), bag=one('bag'), accs=P.acc||[];
+  const all=Object.values(P).flat();
+  const hasMain = !!(top||bottom||dress);
+  let mainOuter=null; if(outer && !hasMain){ mainOuter=outer; outer=null; }
+  const column = hasMain || mainOuter;
+  const out=[]; const add=(it,x,y,w,h,z)=>out.push({it,x,y,w,h,z});
+  if(!column && !shoes){ // only bags / accessories: simple grid
+    const cols=all.length>1?2:1, rows=Math.ceil(all.length/cols);
+    all.forEach((it,i)=>add(it, 4+(i%cols)*(92/cols), 4+Math.floor(i/cols)*(92/rows), 92/cols, 92/rows, 1));
+    return out;
   }
-  g.fillStyle='#111'; g.fillText('PERSON', 20, HEAD+38);
-  const jpg = await new Promise(r=>c.toBlob(r,'image/jpeg',0.92));
-  const png = await new Promise(r=>c.toBlob(r,'image/png'));
-  return {file: new File([jpg], 'outfit-for-gemini.jpg', {type:'image/jpeg'}), png};
+  const side = !!(bag || accs.length);
+  const x0 = outer ? 28 : (side ? 4 : 10), x1 = side ? 72 : (outer ? 98 : 90), w = x1-x0;
+  const bottomEdge = shoes ? 79 : 97, H = bottomEdge-2;
+  if(outer) add(outer, 0, 4, 52, 56, 1);
+  if(dress) add(dress, x0, 2, w, H, 2);
+  else if(top && bottom){ add(bottom, x0+w*.07, 2+H*.43, w*.86, H*.57, 2); add(top, x0, 2, w, H*.47, 3); }
+  else if(top||bottom||mainOuter) add(top||bottom||mainOuter, x0, 2, w, H, 2);
+  if(shoes) column ? add(shoes, x0+w*.16, 81, w*.68, 17, 4) : add(shoes, x0, 18, w, 64, 4);
+  if(bag) add(bag, 70, accs.length?54:44, 30, 34, 5);
+  accs.forEach((a,i)=>add(a, 74, 3+i*16.5, 24, 15, 6));
+  return out;
 }
-function ensureCollage(k){
-  if(!k || !me) return null;
-  if(collage.key===k && collage.file) return Promise.resolve(collage.file);
-  if(collage.key===k && collage.building) return collage.building;
-  collage = {key:k, file:null, building:null};
-  collage.building = buildCollage(k).then(r=>{ if(collage.key===k){ collage.file=r.file; collage.png=r.png; } return r.file; });
-  return collage.building;
+function renderBoard(box, ids){
+  box.replaceChildren(...layout(ids).map(b=>el('img',{class:'piece', src:url(shown(b.it)), alt:CAT[b.it.cat].one, draggable:'false', 'data-id':b.it.id,
+    style:`left:${b.x}%;top:${b.y}%;width:${b.w}%;height:${b.h}%;z-index:${b.z}`})));
+  return box;
 }
-function sendToGeminiApp(){
-  const k=selKey(); if(!k) return;
-  if(!me){ toast('Add your full-body photo in the Me tab first.'); return switchView('settings'); }
-  if(collage.key!==k || !collage.file){ ensureCollage(k); return toast('Preparing the image… tap again in a second.'); }
-  const file = collage.file;
-  if(navigator.canShare && navigator.canShare({files:[file]})){
-    navigator.share({files:[file], text:QUICK_PROMPT}).then(()=>{
-      toast('In Gemini just tap send. The instructions are in the image.', 6000);
-    }).catch(()=>{});
-  } else {
-    const a=document.createElement('a'); a.href=URL.createObjectURL(file); a.download=file.name; document.body.append(a); a.click(); a.remove();
-    openSheet([ el('h3',{},'Open Gemini'),
-      el('p',{class:'msg'},'The outfit image was downloaded and the prompt copied. Open Gemini, attach the image, paste the prompt and generate. Save the result, then tap “Add Gemini result”.'),
-      el('div',{class:'stack'},
-        el('a',{class:'btn primary',href:'https://gemini.google.com/app',target:'_blank',rel:'noopener',style:'text-decoration:none'},'Open gemini.google.com'),
-        el('button',{class:'btn',onclick:()=>{ navigator.clipboard?.writeText(APP_PROMPT).then(()=>toast('Prompt copied')).catch(()=>{}); }},'Copy prompt again'),
-        el('button',{class:'btn',onclick:closeSheet},'Done')) ]);
-  }
-}
-function openGemini(){
-  const a=document.createElement('a'); a.href='https://gemini.google.com/app'; a.target='_blank'; a.rel='noopener';
-  document.body.append(a); a.click(); a.remove();
-}
-function quickGemini(){
-  const k=selKey(); if(!k) return;
-  if(!me){ toast('Add your full-body photo in the Me tab first.'); return switchView('settings'); }
-  if(collage.key!==k || !collage.png){ ensureCollage(k); return toast('Preparing the image… tap again in a second.'); }
-  if(!(navigator.clipboard && window.ClipboardItem)){ toast('Copying images isn’t supported here, using Share instead.'); return sendToGeminiApp(); }
-  navigator.clipboard.write([new ClipboardItem({'image/png': collage.png})])
-    .then(()=>toast('Image copied. In Gemini: long-press → Paste, then send.', 6000))
-    .catch(()=>toast('Could not copy the image. Try “Share to Gemini app”.', 5000));
-  openGemini();
-}
-async function saveLookFrom(k, blob){
-  const [t,b,s]=k.split('|');
-  const look={key:k, image: await shrink(blob,1400,0.92), created:Date.now(), top:t, bottom:b, shoes:s};
-  looks.set(k,look); await put('looks',look);
-  setMode('me'); renderLooks(); renderMe(); toast('Look saved for this outfit');
-}
-async function pasteResult(){
-  const k=selKey(); if(!k) return;
-  if(!navigator.clipboard?.read) return toast('Pasting isn’t supported here. Use “Add from Photos”.', 4000);
-  try{
-    const list = await navigator.clipboard.read();
-    for(const it of list){
-      const type = it.types.find(t=>t.startsWith('image/'));
-      if(type) return saveLookFrom(k, await it.getType(type));
-    }
-    toast('No image on the clipboard. In Gemini, long-press the result → Copy.', 5000);
-  }catch(e){ toast('Couldn’t read the clipboard. Allow paste, or use “Add from Photos”.', 5000); }
-}
-document.addEventListener('paste', e=>{
-  const k=selKey(); if(!k || !$('#view-outfit').classList.contains('on')) return;
-  const f=[...(e.clipboardData?.files||[])].find(f=>f.type.startsWith('image/'));
-  if(f){ e.preventDefault(); saveLookFrom(k, f); }
-});
-let resultKey = null;
-function addGeminiResult(){
-  const k=selKey(); if(!k) return; resultKey=k; $('#resultInput').click();
-}
-$('#resultInput').addEventListener('change', async e=>{
-  const f=e.target.files[0]; e.target.value=''; const k=resultKey; resultKey=null;
-  if(!f || !k) return;
-  saveLookFrom(k, f);
-});
-function redoSheet(){
-  openSheet([ el('h3',{},'Redo this look'),
-    el('div',{class:'stack'},
-      el('button',{class:'btn primary',onclick:()=>{ closeSheet(); quickGemini(); }},'⚡ Quick Gemini'),
-      el('button',{class:'btn',onclick:()=>{ closeSheet(); sendToGeminiApp(); }},'Share to Gemini app'),
-      el('button',{class:'btn',onclick:()=>{ closeSheet(); pasteResult(); }},'Paste result'),
-      el('button',{class:'btn',onclick:()=>{ closeSheet(); addGeminiResult(); }},'Add from Photos'),
-      el('button',{class:'btn',onclick:()=>{ closeSheet(); tryOn(true); }},'Generate with API key (paid)'),
-      el('button',{class:'btn',onclick:closeSheet},'Cancel')) ]);
-}
-
-/* ---------- try-on ---------- */
-async function tryOn(force=false){
-  const k = selKey();
-  if(!k) return toast('Pick a top, bottom and shoes first.');
-  if(!force && looks.has(k)) return updateStage();
-  if(!me){ toast('Add your full-body photo in the Me tab.'); return switchView('settings'); }
-  if(!apiKey()){ toast('Add your Gemini API key in the Me tab.'); return switchView('settings'); }
-  if(pending.has(k)) return;
-  const [t,b,s] = k.split('|').map(id=>items.find(i=>i.id===id));
-  pending.add(k); updateStage();
-  try{
-    const parts = [
-      {text: TRYON_PROMPT},
-      {text:'Image 1 — the person:'}, await imgPart(me),
-      {text:'Image 2 — the top:'}, await imgPart(shown(t)),
-      {text:'Image 3 — the bottom:'}, await imgPart(shown(b)),
-      {text:'Image 4 — the shoes:'}, await imgPart(shown(s)),
-    ];
-    const out = await gemini(parts, '3:4');
-    const look = {key:k, image: await shrink(out, 1400, 0.92), created:Date.now(), top:t.id, bottom:b.id, shoes:s.id};
-    looks.set(k, look); await put('looks', look);
-    if(selKey()!==k) toast('A look finished — find it in Looks.');
-  }catch(e){ toast(e.message, 4500); }
-  pending.delete(k); updateStage(); renderLooks();
-}
+const miniBoard = ids => renderBoard(el('div',{class:'board'}), ids);
 
 /* ---------- render: outfit ---------- */
-function buildRows(){
-  const wrap = $('#rows'); wrap.replaceChildren();
-  for(const [cat,label] of CATS){
-    const list = byCat(cat);
-    if(!list.find(i=>i.id===sel[cat])) sel[cat] = list[0]?.id || null;
-    const idx = Math.max(0, list.findIndex(i=>i.id===sel[cat]));
-    const count = el('span',{}, list.length?`${idx+1} / ${list.length}`:'');
-    const car = el('div',{class:'car','data-cat':cat});
-    if(!list.length){
-      car.append(el('div',{class:'empty'}, el('span',{},`No ${label.toLowerCase()}s yet · `), el('button',{onclick:()=>switchView('wardrobe')},'Add')));
-    } else list.forEach(it=> car.append(el('div',{class:'slide'}, el('img',{src:url(shown(it)),alt:label,loading:'lazy'}))));
-    let st;
-    car.addEventListener('scroll',()=>{ clearTimeout(st); st=setTimeout(()=>{
-      const i = Math.round(car.scrollLeft / car.clientWidth); const it=list[i];
-      if(it && sel[cat]!==it.id){ sel[cat]=it.id; count.textContent=`${i+1} / ${list.length}`; updateStage(); }
-    },110); });
-    const go = d => { if(!list.length) return; const i=Math.round(car.scrollLeft/car.clientWidth); const n=(i+d+list.length)%list.length; car.scrollTo({left:n*car.clientWidth,behavior:'smooth'}); };
-    const row = el('div',{class:'row'},
-      el('div',{class:'row-h'}, el('span',{},label), count),
-      el('div',{class:'car-wrap'}, car,
-        list.length>1 ? el('button',{class:'nav l','aria-label':'Previous',onclick:()=>go(-1)},'‹') : null,
-        list.length>1 ? el('button',{class:'nav r','aria-label':'Next',onclick:()=>go(1)},'›') : null));
-    wrap.append(row);
-  }
-  positionRows();
-  updateStage();
-}
-function positionRows(){
-  requestAnimationFrame(()=>document.querySelectorAll('.car').forEach(car=>{
-    const cat=car.dataset.cat; const list=byCat(cat); const i=list.findIndex(x=>x.id===sel[cat]);
-    if(i>=0) car.scrollLeft = i*car.clientWidth;
-  }));
-}
-function updateStage(){
-  const k = selKey(); const look = k && looks.get(k);
-  const img=$('#stageImg'), ph=$('#stagePh'), chip=$('#stageChip'), busy=$('#stageBusy'), btn=$('#btnTry'), flat=$('#flat');
-  const isPending = !!(k && pending.has(k));
-  busy.classList.toggle('on', mode==='me' && isPending);
-  $('#busyText').textContent = 'Styling you…\nusually 10–30 seconds';
-  img.hidden=true; chip.hidden=true; ph.hidden=true; flat.classList.remove('on');
-  if(!k){
-    const missing = CATS.filter(([c])=>!byCat(c).length).map(([,l])=>l.toLowerCase());
-    ph.hidden=false; ph.innerHTML = `<b>Build your wardrobe</b>Add at least one ${missing.join(', ')||'item'} in the Wardrobe tab.`;
-    btn.textContent='✦ Try on me'; btn.className='btn primary'; btn.disabled=true; return;
-  }
-  if(mode==='flat'){
-    const [t,b,s] = CATS.map(([c])=>items.find(i=>i.id===sel[c]));
-    flat.querySelector('.f-top').src=url(shown(t)); flat.querySelector('.f-bottom').src=url(shown(b)); flat.querySelector('.f-shoes').src=url(shown(s));
-    flat.classList.add('on');
-    if(look){ chip.hidden=false; chip.textContent='✓ On-me look saved'; }
-    else if(isPending){ chip.hidden=false; chip.textContent='Generating on you…'; }
-    btn.textContent = look ? 'View on me' : '✦ Try on me'; btn.className='btn primary';
-  } else if(look){
-    img.src=url(look.image); img.hidden=false; chip.hidden=false; chip.textContent='✓ Saved look';
-    btn.textContent='↻ Redo'; btn.className='btn';
-  } else if(!me){
-    ph.hidden=false; ph.innerHTML = `<b>Add your photo</b>Put a full-body photo of yourself in the Me tab.`;
-    btn.textContent='Add my photo'; btn.className='btn primary';
-  } else {
-    ensureCollage(k);
-    ph.hidden=false;
-    ph.innerHTML = `<b>Not on you yet</b>See this outfit on you with the free Gemini app.
-      <button class="btn primary" data-act="quick">⚡ Quick Gemini</button>
-      <ol class="steps"><li>In Gemini: long-press → Paste, send</li><li>Long-press the result → Copy</li><li>Come back, tap “Paste result”</li></ol>
-      <button class="link" data-act="send">Share to Gemini app</button> <button class="link" data-act="photos">Add from Photos</button>
-      <button class="link" data-act="api">Generate with API key (paid)</button>`;
-    btn.textContent='📋 Paste result'; btn.className='btn primary';
-  }
-  btn.disabled = isPending;
-}
-$('#btnTry').onclick = () => {
-  const k = selKey(); if(!k) return;
-  if(mode==='flat') return setMode('me');
-  if(!me) return switchView('settings');
-  if(looks.has(k)) return redoSheet();
-  pasteResult();
-};
-$('#stagePh').addEventListener('click', e=>{
-  const a=e.target.closest('[data-act]')?.dataset.act;
-  if(a==='quick') quickGemini(); else if(a==='send') sendToGeminiApp(); else if(a==='photos') addGeminiResult(); else if(a==='api') tryOn();
-});
-$('#btnShuffle').onclick = () => {
-  for(const [c] of CATS){ const l=byCat(c); if(l.length) sel[c]=l[Math.floor(Math.random()*l.length)].id; }
-  buildRows();
-};
+function renderOutfit(){
+  const k=curKey(), look=k&&looks.get(k), img=look?.image, isPending=!!(k&&pending.has(k));
+  if(!img) stageMode='board';
+  const showMe = !!img && stageMode==='me';
+  renderBoard($('#board'), outfit);
+  $('#board').hidden = showMe;
+  const si=$('#stageImg'); si.hidden=!showMe; if(showMe && si.src!==url(img)) si.src=url(img);
+  $('#stageSeg').hidden=!img;
+  $$('#stageSeg button').forEach(b=>b.classList.toggle('on', b.dataset.m===(showMe?'me':'board')));
+  $('#stageBusy').hidden=!isPending;
 
-/* ---------- render: wardrobe ---------- */
-function renderWardrobe(){
-  const g=$('#wardGrid'); g.replaceChildren();
-  const list = items.filter(i=>wardFilter==='all'||i.cat===wardFilter).sort((a,b)=>b.created-a.created);
-  if(!list.length){ g.append(el('div',{class:'blank',style:'grid-column:1/-1'},'Nothing here yet. Use the buttons above to add photos of your clothes.')); return; }
-  for(const it of list){
-    const badge = it.status==='work' ? el('span',{class:'badge work'},'Cleaning…')
-      : it.status==='err' ? el('span',{class:'badge err'},'Failed')
-      : (it.status==='raw' || it.useOriginal || !it.product) ? el('span',{class:'badge'},'Original') : null;
-    g.append(el('button',{class:'tile',onclick:()=>itemSheet(it.id)}, el('img',{src:url(shown(it)),alt:it.cat}), badge));
-  }
+  const ph=$('#stagePh');
+  if(!outfit.length){
+    ph.hidden=false;
+    ph.replaceChildren(...(items.length
+      ? [el('b',{},'Pick your pieces'), el('span',{},'Tap clothes below, or drag them up here.')]
+      : [el('b',{},'Start your wardrobe'), el('span',{},'Add photos of your clothes. Backgrounds are removed for you.'), B('Add clothes', openAddSheet, 'primary', 'plus')]));
+  } else ph.hidden=true;
+
+  const saved=isSaved(look);
+  $('#btnSave').classList.toggle('on', saved);
+  $('#btnSave').setAttribute('aria-label', saved?'Remove from Looks':'Save to Looks');
+  $('#btnSave').disabled = !outfit.length;
+  $('#btnShuffle').disabled = !items.length;
+
+  const t=$('#btnTry');
+  t.disabled = !outfit.length || isPending;
+  t.className = 'btn ' + (img ? '' : 'primary');
+  t.replaceChildren(icon(img?'refresh':'spark','i s'), isPending ? 'Styling…' : img ? 'Try again' : 'Try on me');
+
+  $('#outfitSub').textContent = outfit.length ? plural(outfit.length,'piece') + (img?' · on you':'') : 'Mix and match your clothes';
+  renderTray();
 }
-document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>{
-  wardFilter=b.dataset.f; document.querySelectorAll('#seg button').forEach(x=>x.classList.toggle('on',x===b)); renderWardrobe();
+function renderTray(){
+  const chips=$('#trayChips');
+  chips.replaceChildren(...CATS.map(c=>{
+    const n=byCat(c.id).length, has=outfit.some(id=>itemOf(id)?.cat===c.id);
+    return el('button',{class:'chip'+(c.id===trayCat?' on':''), role:'tab', 'aria-selected':String(c.id===trayCat), onclick:()=>setTray(c.id)},
+      has?el('span',{class:'dot','aria-label':'in outfit'}):null, c.label, n?el('span',{class:'n'},n):null);
+  }));
+  const row=$('#trayRow'), keep=row.dataset.cat===trayCat ? row.scrollLeft : 0;
+  row.dataset.cat=trayCat;
+  const c=CAT[trayCat], list=byCat(trayCat);
+  if(!list.length){
+    row.replaceChildren(el('div',{class:'tray-empty'}, el('span',{},`No ${c.label.toLowerCase()} yet`), B('Add', ()=>pickFor(trayCat), 'sm', 'plus')));
+    return;
+  }
+  const inCat=outfit.filter(id=>itemOf(id)?.cat===trayCat);
+  const cards=[];
+  if(inCat.length) cards.push(el('button',{class:'card alt', onclick:()=>{ setOutfit(outfit.filter(id=>!inCat.includes(id)), `Removed ${c.label.toLowerCase()}`); }}, icon('x'), 'None'));
+  for(const it of list){
+    const on=outfit.includes(it.id);
+    const card=el('button',{class:'card'+(on?' on':''), 'data-id':it.id, 'aria-pressed':String(on), 'aria-label':`${c.one}${on?' (in outfit)':''}`,
+      onclick:()=>{ if(dragSuppressed()) return; on ? removePiece(it.id) : addPiece(it.id); },
+      onpointerdown:e=>dragDown(e, it.id, 'tray', card)},
+      el('img',{src:url(shown(it)),alt:'',draggable:'false',loading:'lazy'}),
+      on?el('span',{class:'tick'},icon('check')):null,
+      it.status==='work'?el('span',{class:'proc'},el('div',{class:'spin sm'})):null);
+    cards.push(card);
+  }
+  cards.push(el('button',{class:'card alt', onclick:()=>pickFor(trayCat)}, icon('plus'), 'Add'));
+  row.replaceChildren(...cards);
+  row.scrollLeft=keep;
+}
+function setTray(cat, scrollTo){
+  trayCat=cat; LS.set('op_tray',cat); renderTray();
+  $('#trayChips .chip.on')?.scrollIntoView({inline:'nearest',block:'nearest',behavior:'smooth'});
+  if(scrollTo) $(`#trayRow [data-id="${scrollTo}"]`)?.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
+}
+$$('#stageSeg button').forEach(b=>b.onclick=()=>{ stageMode=b.dataset.m; renderOutfit(); });
+$('#board').addEventListener('click', e=>{
+  if(dragSuppressed()) return;
+  const id=e.target.closest('.piece')?.dataset.id; const it=itemOf(id); if(!it) return;
+  setTray(it.cat, id);
 });
-document.querySelectorAll('.adds input').forEach(inp=>inp.addEventListener('change', async ()=>{
-  const files=[...inp.files]; inp.value='';
-  if(!files.length) return;
+$('#board').addEventListener('pointerdown', e=>{ const p=e.target.closest('.piece'); if(p) dragDown(e, p.dataset.id, 'stage', p); });
+['#stage','#trayRow'].forEach(s=>$(s).addEventListener('contextmenu', e=>e.preventDefault()));
+$('#btnShuffle').onclick = shuffle;
+$('#btnSave').onclick = toggleSave;
+$('#btnMore').onclick = moreSheet;
+$('#btnTry').onclick = tryOn;
+$('#btnCancelGen').onclick = () => pending.get(curKey())?.abort();
+
+/* ---------- drag & drop (tray → stage to add, stage → out to remove) ---------- */
+let D=null, suppressUntil=0;
+const dragSuppressed = () => Date.now() < suppressUntil;
+function dragDown(e, id, from, src){
+  if(e.button>0 || D) return;
+  D={id, from, src, pid:e.pointerId, sx:e.clientX, sy:e.clientY, x:e.clientX, y:e.clientY, active:false, timer:null};
+  if(from==='stage') D.timer=setTimeout(()=>{ if(D && !D.active) dragBegin(); }, e.pointerType==='mouse'?120:280);
+}
+function overStage(){ const r=$('#stage').getBoundingClientRect(); return D.x>=r.left && D.x<=r.right && D.y>=r.top && D.y<=r.bottom; }
+function dragBegin(){
+  clearTimeout(D.timer); D.active=true;
+  const img=D.src.tagName==='IMG'?D.src:D.src.querySelector('img');
+  D.ghost=el('img',{class:'drag-ghost', src:img.src, alt:''}); document.body.append(D.ghost);
+  D.src.classList.add('dragging');
+  $('#stage').classList.add(D.from==='tray'?'dnd-add':'dnd-remove');
+  $('#dropHint').textContent = D.from==='tray' ? 'Drop to add' : 'Drag out to remove';
+  navigator.vibrate?.(8);
+  dragMove();
+}
+function dragMove(){
+  const over=overStage();
+  D.ghost.style.transform=`translate(${D.x-48}px,${D.y-70}px) scale(1.04)`;
+  D.ghost.classList.toggle('rm', D.from==='stage' && !over);
+  $('#stage').classList.toggle('over', over);
+}
+function dragEnd(drop){
+  const d=D; if(!d) return;
+  const over = d.active && overStage();
+  D=null; clearTimeout(d.timer);
+  if(!d.active) return;
+  suppressUntil=Date.now()+400;
+  d.ghost.remove(); d.src.classList.remove('dragging');
+  $('#stage').classList.remove('dnd-add','dnd-remove','over');
+  if(!drop) return;
+  if(d.from==='tray' && over) addPiece(d.id);
+  else if(d.from==='stage' && !over) removePiece(d.id);
+}
+window.addEventListener('pointermove', e=>{
+  if(!D || e.pointerId!==D.pid) return;
+  D.x=e.clientX; D.y=e.clientY; const dx=D.x-D.sx, dy=D.y-D.sy;
+  if(!D.active){
+    if(D.from==='tray'){
+      if(dy<-12 && Math.abs(dy)>Math.abs(dx)*1.2) dragBegin();
+      else if(Math.abs(dx)>10 || dy>14) dragEnd(false);
+    } else if(Math.hypot(dx,dy)>8){
+      if(e.pointerType==='mouse') dragBegin(); else dragEnd(false);
+    }
+    return;
+  }
+  dragMove();
+});
+window.addEventListener('pointerup', e=>{ if(D && e.pointerId===D.pid) dragEnd(true); });
+window.addEventListener('pointercancel', e=>{ if(D && e.pointerId===D.pid) dragEnd(false); });
+document.addEventListener('touchmove', e=>{ if(D?.active) e.preventDefault(); }, {passive:false});
+
+/* ---------- looks: save / delete ---------- */
+async function putLook(l){ looks.set(l.key,l); await put('looks',l); }
+async function removeLook(k, msg='Removed from Looks'){
+  const l=looks.get(k); if(!l) return;
+  looks.delete(k); await del('looks',k); renderAll();
+  snack(msg,'Undo', async()=>{ await putLook(l); renderAll(); });
+}
+async function toggleSave(){
+  const k=curKey(); if(!k) return;
+  const l=looks.get(k);
+  if(isSaved(l)) return removeLook(k, l.image ? 'Removed look and its try-on photo' : 'Removed from Looks');
+  await putLook({key:k, items:[...outfit], image:null, created:Date.now(), saved:true});
+  renderAll(); snack('Saved to Looks','View',()=>switchView('looks'));
+}
+
+/* ---------- try-on generation ---------- */
+function buildPrompt(cats){
+  const lines = cats.map((c,i)=>`- Image ${i+2}: ${CAT[c].prompt}`).join('\n');
+  return `Create a realistic full-body photograph of the SAME person shown in image 1, now wearing the clothing items shown in the other images.
+Items:
+${lines}
+Rules:
+- Keep the person's identity identical: same face, facial features, hair, skin tone, body shape and proportions. Do not beautify or change them.
+- Reproduce each item's exact color, pattern, print, logos and details, with a natural, realistic fit.
+- Replace the matching parts of their current outfit with these items. Keep any part of their current outfit that is not replaced. Do not add garments or accessories that are not listed.
+- Full body visible from head to feet, standing in a relaxed natural pose, facing the camera.
+- Plain light-grey studio background, soft even lighting, sharp photographic quality, portrait 3:4.`;
+}
+async function prep(blob, max){ return toB64(await shrink(blob, max, .86)); }
+async function generate(ids, signal){
+  const its=ids.map(itemOf).filter(Boolean);
+  const person=await prep(me, 1024);
+  const pieces=await Promise.all(its.map(async it=>({cat:it.cat, image:await prep(shown(it), 768)})));
+  if(cfg.mode==='service'){
+    let r;
+    try{
+      r = await fetch(cfg.endpoint+'/tryon',{method:'POST',signal,
+        headers:{'Content-Type':'application/json', ...(cfg.code?{'X-Access-Code':cfg.code}:{})},
+        body:JSON.stringify({person, pieces})});
+    }catch(e){ if(e.name==='AbortError') throw e; throw new Error('Could not reach the try-on service. Check your connection.'); }
+    const j=await r.json().catch(()=>({}));
+    if(r.status===401) throw new Error('The try-on service needs a valid access code. Add it in the Me tab.');
+    if(r.status===429) throw new Error(j.error || 'Too many try-ons right now. Try again in a minute.');
+    if(!r.ok || !j.image) throw new Error(j.error || `Try-on failed (${r.status}). Try again.`);
+    return b64ToBlob(j.image, j.mime||'image/png');
+  }
+  if(cfg.mode==='key'){
+    const parts=[{text:buildPrompt(pieces.map(p=>p.cat))}, {text:'Image 1 — the person:'}, {inline_data:{mime_type:'image/jpeg',data:person}}];
+    pieces.forEach((p,i)=>parts.push({text:`Image ${i+2} — ${CAT[p.cat].one.toLowerCase()}:`}, {inline_data:{mime_type:'image/jpeg',data:p.image}}));
+    return geminiDirect(parts, signal);
+  }
+  throw new Error('NOT_SETUP');
+}
+async function geminiDirect(parts, signal){
+  const endpoint=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`;
+  const call=async withCfg=>{
+    const generationConfig = withCfg ? {responseModalities:['IMAGE'], imageConfig:{aspectRatio:'3:4'}} : {responseModalities:['TEXT','IMAGE']};
+    const r=await fetch(endpoint,{method:'POST',signal,headers:{'Content-Type':'application/json','x-goog-api-key':cfg.key},body:JSON.stringify({contents:[{role:'user',parts}],generationConfig})});
+    return {r, j: await r.json().catch(()=>({}))};
+  };
+  let {r,j}=await call(true);
+  if(r.status===400 && !/API key/i.test(j?.error?.message||'')) ({r,j}=await call(false));
+  if(!r.ok){
+    const m=j?.error?.message||`HTTP ${r.status}`;
+    if(r.status===429 && /limit: ?0\b|free_tier/i.test(m)) throw new Error('Gemini image generation has no free tier. Turn on billing for your key in Google AI Studio.');
+    if(r.status===429) throw new Error('Gemini is busy or your quota is used up. Try again in a minute.');
+    if(r.status===400 && /API key/i.test(m)) throw new Error('That API key was rejected. Check it in the Me tab.');
+    throw new Error(m);
+  }
+  const cand=j.candidates?.[0], p=cand?.content?.parts?.find(p=>p.inlineData||p.inline_data);
+  if(!p){
+    const txt=cand?.content?.parts?.find(p=>p.text)?.text, why=j.promptFeedback?.blockReason||cand?.finishReason;
+    throw new Error(txt ? 'Gemini replied: '+txt.slice(0,160) : 'No image came back'+(why?` (${why})`:'')+'. Try again.');
+  }
+  const d=p.inlineData||p.inline_data;
+  return b64ToBlob(d.data, d.mimeType||d.mime_type||'image/png');
+}
+async function tryOn(){
+  const k=curKey(); if(!k) return toast('Add some pieces first');
+  if(!me) return needPhotoSheet();
+  if(!cfg.mode) return setupSheet();
+  if(pending.has(k)) return;
+  const ids=[...outfit], ctrl=new AbortController();
+  pending.set(k, ctrl); renderOutfit();
+  try{
+    const blob=await generate(ids, ctrl.signal);
+    const prev=looks.get(k);
+    await putLook({key:k, items:ids, image:await shrink(blob,1400,.92), created:Date.now(), saved:true, ...(prev?{created:prev.created}:{})});
+    if(curKey()===k){ stageMode='me'; }
+    else snack('Your try-on is ready','View',()=>{ setOutfit(enforce(ids)); stageMode='me'; renderOutfit(); switchView('outfit'); });
+  }catch(e){
+    if(e.name==='AbortError') toast('Cancelled');
+    else openSheet([el('p',{class:'msg'},e.message),
+      el('div',{class:'stack'}, B('Try again',()=>{ closeSheet(); tryOn(); },'primary','refresh'),
+        B('Copy outfit image instead',()=>{ closeSheet(); copyCollage(); },'','copy'))], {title:'Try-on didn’t work'});
+  }finally{ pending.delete(k); renderAll(); }
+}
+function needPhotoSheet(){
+  openSheet([el('p',{class:'msg'},'Try-on needs one full-body photo of you: standing, facing the camera, head to feet in frame.'),
+    el('div',{class:'stack'}, B('Choose photo',()=>{ closeSheet(); $('#meInput').click(); },'primary','image'), B('Not now',closeSheet))],
+    {title:'Add your photo'});
+}
+function setupSheet(){
+  openSheet([el('p',{class:'msg'},'In-app try-on isn’t set up on this device yet. Add a Gemini API key in Me → Try-on, or copy the outfit image and paste it into Gemini or any AI image app.'),
+    el('div',{class:'stack'}, B('Set up try-on',()=>{ closeSheet(); switchView('me'); },'primary'), B('Copy outfit image',()=>{ closeSheet(); copyCollage(); },'','copy'))],
+    {title:'Set up try-on'});
+}
+
+/* ---------- compact outfit image (copy / share) ---------- */
+let collageCache=null; // {key, promise}
+function collageText(its){
+  return `Make a realistic full-body photo of the PERSON on the left wearing exactly the items on the right (${its.map(it=>CAT[it.cat].one.toLowerCase()).join(', ')}). Keep the same face, hair, skin tone and body. Same colors and details on each item. Keep any part of their current outfit that is not replaced, and add nothing else. Head to feet visible, standing, facing the camera, plain light-grey background, portrait 3:4.`;
+}
+function wrapLines(g, text, maxW){
+  const out=[]; let line='';
+  for(const w of text.split(' ')){ const t=line?line+' '+w:w; if(g.measureText(t).width>maxW && line){ out.push(line); line=w; } else line=t; }
+  if(line) out.push(line); return out;
+}
+async function drawContain(g, blob, x, y, w, h){
+  const im=await loadImg(blob), s=Math.min(w/im.naturalWidth, h/im.naturalHeight), dw=im.naturalWidth*s, dh=im.naturalHeight*s;
+  g.drawImage(im, x+(w-dw)/2, y+(h-dh)/2, dw, dh); URL.revokeObjectURL(im.src);
+}
+async function buildCollage(ids){
+  const its=ids.map(itemOf).filter(Boolean);
+  const W=1500, BODY=1200, FONT='600 30px Inter, Helvetica, Arial, sans-serif';
+  const m=document.createElement('canvas').getContext('2d'); m.font=FONT;
+  const lines=wrapLines(m, collageText(its), W-48), HEAD=40+lines.length*40+24;
+  const c=document.createElement('canvas'); c.width=W; c.height=HEAD+BODY;
+  const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,W,c.height);
+  g.fillStyle='#111'; g.font=FONT; lines.forEach((l,i)=>g.fillText(l, 24, 48+i*40));
+  g.fillStyle='#e5e5e5'; g.fillRect(0,HEAD-10,W,3);
+  if(me) await drawContain(g, me, 0, HEAD+50, 840, BODY-60);
+  g.fillStyle='#e5e5e5'; g.fillRect(858,HEAD,3,BODY);
+  g.fillStyle='#111'; g.font='700 26px Inter, Helvetica, Arial, sans-serif'; g.fillText('PERSON', 24, HEAD+38);
+  const n=its.length, cols=n>4?2:1, rows=Math.ceil(n/cols), cw=600/cols, ch=BODY/rows;
+  for(let i=0;i<n;i++){
+    const x=880+(i%cols)*cw, y=HEAD+Math.floor(i/cols)*ch;
+    g.fillStyle='#111'; g.fillText(CAT[its[i].cat].one.toUpperCase(), x+4, y+36);
+    await drawContain(g, shown(its[i]), x, y+48, cw-20, ch-60);
+  }
+  const png=await new Promise(r=>c.toBlob(r,'image/png'));
+  const jpg=await new Promise(r=>c.toBlob(r,'image/jpeg',0.92));
+  return {png, file:new File([jpg],'outfit.jpg',{type:'image/jpeg'})};
+}
+function ensureCollage(){
+  const k=curKey()+'#'+(me?url(me):'');
+  if(collageCache?.key!==k) collageCache={key:k, promise:buildCollage([...outfit])};
+  return collageCache.promise;
+}
+function openGemini(){ const a=el('a',{href:'https://gemini.google.com/app',target:'_blank',rel:'noopener'}); document.body.append(a); a.click(); a.remove(); }
+async function copyCollage(){
+  if(!outfit.length) return toast('Add some pieces first');
+  if(!me) return needPhotoSheet();
+  const p=ensureCollage();
+  if(navigator.clipboard?.write && window.ClipboardItem){
+    try{
+      await navigator.clipboard.write([new ClipboardItem({'image/png': p.then(r=>r.png)})]);
+      return snack('Outfit image copied. Paste it into Gemini.','Open Gemini',openGemini,7000);
+    }catch{}
+  }
+  download((await p).file, 'outfit.jpg'); toast('Copying isn’t supported here, so the image was downloaded.', 4000);
+}
+async function shareCollage(){
+  if(!outfit.length) return toast('Add some pieces first');
+  if(!me) return needPhotoSheet();
+  const {file}=await ensureCollage();
+  if(navigator.canShare?.({files:[file]})){
+    try{ await navigator.share({files:[file], text:'Follow the instructions written at the top of this image.'}); return; }
+    catch(e){ if(e.name==='AbortError') return; }
+  }
+  download(file,'outfit.jpg'); toast('Image downloaded');
+}
+async function saveLookFrom(k, ids, blob){
+  const prev=looks.get(k);
+  await putLook({key:k, items:ids, image:await shrink(blob,1400,.92), created:prev?.created||Date.now(), saved:true});
+  stageMode='me'; renderAll(); toast('Try-on photo added');
+}
+let resultFor=null;
+$('#resultInput').addEventListener('change', e=>{
+  const f=e.target.files[0]; e.target.value=''; const r=resultFor; resultFor=null;
+  if(f && r) saveLookFrom(r.k, r.ids, f).catch(err=>toast(err.message));
+});
+document.addEventListener('paste', e=>{
+  const k=curKey(); if(!k || !$('#view-outfit').classList.contains('on')) return;
+  const f=[...(e.clipboardData?.files||[])].find(f=>f.type.startsWith('image/'));
+  if(f){ e.preventDefault(); saveLookFrom(k, [...outfit], f); }
+});
+function moreSheet(){
+  const k=curKey(); const look=k&&looks.get(k);
+  if(k && me) ensureCollage();
+  const row=(ic, title, sub, fn, cls='')=>el('button',{class:cls, onclick:()=>{ closeSheet(); fn(); }}, el('span',{class:'ico'},icon(ic)), el('span',{}, title, sub?el('small',{},sub):null));
+  openSheet([el('div',{class:'menu'},
+    k ? row('copy','Copy outfit image','You, the pieces and instructions in one image, ready to paste into Gemini', copyCollage) : null,
+    k ? row('share','Share outfit image','Send it to the Gemini app or save it', shareCollage) : null,
+    k ? row('image','Add a try-on photo','Import a result you made in another app', ()=>{ resultFor={k, ids:[...outfit]}; $('#resultInput').click(); }) : null,
+    look?.image ? row('trash','Delete try-on photo','Keeps the outfit in Looks', async()=>{ look.image=null; look.saved=true; await putLook(look); renderAll(); toast('Try-on photo deleted'); }) : null,
+    k ? row('eraser','Clear outfit',null, ()=>setOutfit([], 'Outfit cleared')) : null,
+    !k ? el('p',{class:'msg',style:'padding:0 6px'},'Add some pieces to your outfit first.') : null,
+  )], {title:'Outfit options'});
+}
+
+/* ---------- wardrobe ---------- */
+let pickCat=null;
+function pickFor(cat){ pickCat=cat; $('#filePick').click(); }
+function openAddSheet(){
+  if(wardFilter!=='all' && $('#view-wardrobe').classList.contains('on')) return pickFor(wardFilter);
+  openSheet([el('p',{class:'msg'},'What are you adding? You can choose several photos at once.'),
+    el('div',{class:'cat-grid'}, CATS.map(c=>B(c.label, ()=>{ closeSheet(); pickFor(c.id); })))], {title:'Add clothes'});
+}
+$('#btnAdd').onclick=openAddSheet;
+$('#filePick').addEventListener('change', async e=>{
+  const files=[...e.target.files]; e.target.value=''; const cat=pickCat; pickCat=null;
+  if(!files.length || !cat) return;
+  let n=0;
   for(const f of files){
     try{
-      const it = {id:uid(), cat:inp.dataset.cat, original: await shrink(f,1280,0.9), product:null, useOriginal:false, status:'work', error:'', created:Date.now()};
-      items.push(it); await save(it);
-      queueCleanup(it.id);
-    }catch(e){ toast(e.message); }
+      const it={id:uid(), cat, original:await shrink(f,1280,.9), product:null, useOriginal:false, status:'work', error:'', created:Date.now()+n};
+      items.push(it); await save(it); queueCleanup(it.id); n++;
+    }catch(err){ toast(err.message); }
   }
+  if(!n) return;
+  trayCat=cat; LS.set('op_tray',cat);
   renderAll();
-}));
-
+  toast(`Added ${n} ${n===1?CAT[cat].one.toLowerCase():CAT[cat].label.toLowerCase()}. Removing backgrounds…`, 3500);
+});
+function tile(it){
+  const inO=outfit.includes(it.id);
+  const badge = it.status==='work' ? el('span',{class:'badge'}, el('div',{class:'spin sm',style:'width:11px;height:11px;border-width:1.5px'}), 'Cleaning')
+    : it.status==='err' ? el('span',{class:'badge err'},'Failed')
+    : (it.useOriginal || !it.product) ? el('span',{class:'badge'},'Original') : null;
+  return el('button',{class:'tile', onclick:()=>itemSheet(it.id), 'aria-label':CAT[it.cat].one}, el('img',{src:url(shown(it)),alt:'',loading:'lazy'}), badge, inO?el('span',{class:'tick'},icon('check')):null);
+}
+function renderWardrobe(){
+  const counts=Object.fromEntries(CATS.map(c=>[c.id,byCat(c.id).length]));
+  $('#wardSub').textContent = items.length ? plural(items.length,'item') : 'Your clothes, grouped';
+  $('#wardChips').replaceChildren(
+    el('button',{class:'chip'+(wardFilter==='all'?' on':''), onclick:()=>{ wardFilter='all'; renderWardrobe(); }}, 'All', items.length?el('span',{class:'n'},items.length):null),
+    ...CATS.filter(c=>counts[c.id]||wardFilter===c.id).map(c=>el('button',{class:'chip'+(wardFilter===c.id?' on':''), onclick:()=>{ wardFilter=c.id; renderWardrobe(); }}, c.label, el('span',{class:'n'},counts[c.id]))));
+  $('#wardChips').hidden = !items.length;
+  const body=$('#wardBody');
+  if(!items.length){
+    body.replaceChildren(el('div',{class:'empty'}, el('b',{},'Your wardrobe is empty'), 'Snap or upload photos of your clothes. Backgrounds are removed right on your phone, for free.', el('br'), B('Add clothes', openAddSheet, 'primary', 'plus')));
+    return;
+  }
+  const cats = wardFilter==='all' ? CATS.filter(c=>counts[c.id]) : [CAT[wardFilter]];
+  body.replaceChildren(...cats.map(c=>el('section',{class:'group'},
+    el('div',{class:'group-h'}, el('h2',{}, c.label, el('span',{},counts[c.id])), B('Add',()=>pickFor(c.id),'ghost sm','plus')),
+    el('div',{class:'grid'}, byCat(c.id).map(tile), wardFilter!=='all' ? el('button',{class:'tile add',onclick:()=>pickFor(c.id)}, icon('plus'), 'Add') : null))),
+    el('p',{class:'hint'},'Tap an item to change its category, switch between the cut-out and your original photo, or delete it.'));
+}
 function itemSheet(id){
-  const it = items.find(i=>i.id===id); if(!it) return;
-  let showOrig = !it.product || it.useOriginal;
-  const big = el('img',{src:url(showOrig?it.original:it.product)});
-  const toggle = it.product ? el('div',{class:'seg'},
-      el('button',{class:showOrig?'':'on',onclick:e=>{showOrig=false;big.src=url(it.product);tog(e)}},'Product shot'),
-      el('button',{class:showOrig?'on':'',onclick:e=>{showOrig=true;big.src=url(it.original);tog(e)}},'Original')) : null;
-  function tog(e){ e.target.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===e.target)); }
-  const moveRow = el('div',{class:'rowb'}, ...CATS.map(([c,l])=>el('button',{class:'btn sm'+(c===it.cat?' primary':''),style:'flex:1',onclick:async()=>{
-    if(c===it.cat) return; it.cat=c; await save(it); await dropLooksWith(it.id,true); closeSheet(); renderAll(); toast(`Moved to ${l.toLowerCase()}s`);
-  }},l)));
+  const it=itemOf(id); if(!it) return;
+  const inO=outfit.includes(id);
+  const big=el('img',{src:url(shown(it)),alt:''});
   openSheet([
-    el('div',{class:'big'}, big), toggle,
-    it.status==='err' ? el('p',{class:'msg'},'Last cleanup failed: '+it.error) : null,
-    el('div',{class:'stack'},
-      el('button',{class:'btn accent',onclick:()=>{ closeSheet(); it.status='work'; renderWardrobe(); queueCleanup(it.id); }}, it.product?'↻ Remove background again':'✦ Remove background'),
-      it.product ? el('button',{class:'btn',onclick:async()=>{ it.useOriginal=!it.useOriginal; await save(it); await dropLooksWith(it.id,true); closeSheet(); renderAll(); }}, it.useOriginal?'Use the product shot':'Use my original photo instead') : null,
-      el('p',{class:'msg',style:'margin:6px 2px 0'},'Category'), moveRow,
-      el('button',{class:'btn danger',onclick:async()=>{
-        if(!await ask('Delete this item?','It will be removed from your wardrobe along with any looks that use it.')) return;
-        items = items.filter(i=>i.id!==it.id); await del('items',it.id); await dropLooksWith(it.id,true); renderAll(); toast('Deleted');
-      }},'Delete item'))
-  ]);
+    el('div',{class:'media'}, big, it.status==='work'?el('span',{class:'badge'}, el('div',{class:'spin sm',style:'width:11px;height:11px;border-width:1.5px'}),'Removing background…'):null),
+    it.product ? seg([['cut','Cut-out'],['orig','Original photo']], it.useOriginal?'orig':'cut', async v=>{ it.useOriginal=v==='orig'; big.src=url(shown(it)); await save(it); collageCache=null; renderItemsOnly(); }, 'full') : null,
+    it.status==='err' ? el('p',{class:'msg',style:'margin:12px 2px 0'},'Background removal failed: '+it.error) : null,
+    el('p',{class:'sec-l'},'Category'),
+    el('div',{class:'cat-pick'}, CATS.map(c=>el('button',{class:'chip'+(c.id===it.cat?' on':''), onclick:async()=>{
+      if(c.id===it.cat) return; it.cat=c.id; await save(it);
+      if(outfit.includes(id)) setOutfit(enforce(outfit));
+      renderAll(); itemSheet(id); toast(`Moved to ${c.label.toLowerCase()}`);
+    }}, c.one))),
+    el('div',{class:'stack',style:'margin-top:20px'},
+      B(inO?'Remove from outfit':'Add to outfit', ()=>{ closeSheet(); if(inO) removePiece(id); else { addPiece(id); snack('Added to outfit','View',()=>switchView('outfit')); } }, inO?'':'primary', inO?'x':'plus'),
+      it.status!=='work' ? B(it.product?'Remove background again':'Remove background', ()=>{ closeSheet(); it.status='work'; renderItemsOnly(); queueCleanup(id); }, '', 'spark') : null,
+      B('Delete item', ()=>deleteItem(id), 'danger', 'trash')),
+  ], {title:CAT[it.cat].one});
+}
+async function deleteItem(id){
+  const used=[...looks.values()].filter(l=>l.items.includes(id));
+  const msg='It will be removed from your wardrobe'+(used.length?` and from ${plural(used.length,'saved look')}.`:'.');
+  if(!await ask('Delete this item?', msg)) return;
+  items=items.filter(i=>i.id!==id); await del('items',id);
+  for(const l of used){ looks.delete(l.key); await del('looks',l.key); }
+  if(outfit.includes(id)) setOutfit(outfit.filter(x=>x!==id));
+  renderAll(); toast('Item deleted');
 }
 
-/* ---------- render: looks ---------- */
+/* ---------- looks ---------- */
+const lookList = () => [...looks.values()].filter(isSaved).sort((a,b)=>b.created-a.created);
 function renderLooks(){
-  const g=$('#looksGrid'); g.replaceChildren();
-  const list=[...looks.values()].sort((a,b)=>b.created-a.created);
-  if(!list.length){ g.append(el('div',{class:'blank',style:'grid-column:1/-1'},'No looks yet. Pick an outfit and tap “Show on me”.')); return; }
-  for(const l of list) g.append(el('button',{class:'tile',onclick:()=>lookSheet(l.key)}, el('img',{src:url(l.image),alt:'Look'})));
+  const list=lookList(), body=$('#looksBody');
+  $('#looksSub').textContent = list.length ? plural(list.length,'look') : 'Saved outfits and try-ons';
+  if(!list.length){
+    body.replaceChildren(el('div',{class:'empty'}, el('b',{},'No looks yet'), 'Build an outfit and tap the heart to save it, or tap “Try on me” to see it on you.', el('br'), B('Build an outfit',()=>switchView('outfit'),'primary')));
+    return;
+  }
+  body.replaceChildren(el('div',{class:'looks'}, list.map(l=>el('button',{class:'look', onclick:()=>lookSheet(l.key), 'aria-label':'Open look'},
+    l.image ? el('img',{src:url(l.image),alt:'',loading:'lazy'}) : miniBoard(l.items),
+    l.image ? el('span',{class:'badge'},'On me') : null))));
 }
 function lookSheet(k){
   const l=looks.get(k); if(!l) return;
-  openSheet([ el('div',{class:'big',style:'height:62vh'}, el('img',{src:url(l.image)})),
-    el('div',{class:'rowb'},
-      el('button',{class:'btn primary',onclick:()=>{ sel.top=l.top; sel.bottom=l.bottom; sel.shoes=l.shoes; closeSheet(); switchView('outfit'); }},'Open in Outfit'),
-      el('button',{class:'btn danger',onclick:async()=>{ looks.delete(k); await del('looks',k); closeSheet(); renderAll(); }},'Delete')) ]);
+  const media=el('div',{class:'media'+(l.image?' photo':''),style:'height:min(60dvh,520px)'});
+  const show=m=>{ media.className='media'+(m==='me'?' photo':''); media.replaceChildren(m==='me'?el('img',{src:url(l.image),alt:''}):miniBoard(l.items), l.image?segEl:null); };
+  const segEl = l.image ? seg([['board','Pieces'],['me','On me']],'me',show) : null;
+  show(l.image?'me':'board');
+  openSheet([media,
+    el('div',{class:'stack'},
+      B('Wear this outfit', ()=>{ closeSheet(); setOutfit(enforce(l.items)); stageMode=l.image?'me':'board'; renderOutfit(); switchView('outfit'); }, 'primary'),
+      l.image ? B('Save photo', async()=>{
+        const f=new File([l.image],'look.jpg',{type:l.image.type||'image/jpeg'});
+        if(navigator.canShare?.({files:[f]})){ try{ await navigator.share({files:[f]}); return; }catch(e){ if(e.name==='AbortError') return; } }
+        download(f,'look.jpg'); }, '', 'share') : null,
+      B('Delete look', ()=>{ closeSheet(); removeLook(k,'Look deleted'); }, 'danger', 'trash'))
+  ], {title:plural(l.items.filter(itemOf).length,'piece')});
 }
 
-/* ---------- settings ---------- */
+/* ---------- me ---------- */
 function renderMe(){
-  const p=$('#mePic'); p.replaceChildren(me ? el('img',{src:url(me),alt:'You'}) : 'No photo yet');
-  $('#hdrInfo').textContent = `${items.length} items · ${looks.size} looks`;
+  $('#mePic').replaceChildren(me ? el('img',{src:url(me),alt:'Your photo'}) : icon('user'));
+  $('#btnMePhoto').textContent = me ? 'Change photo' : 'Choose photo';
+  $('#btnMeRemove').hidden = !me;
+  const imgs=[...looks.values()].filter(l=>l.image).length;
+  $('#storageInfo').textContent = `${plural(items.length,'item')}, ${plural(lookList().length,'look')} and ${plural(imgs,'try-on photo')}, saved in this browser on this device only.`;
+  $('#btnClearLooks').disabled = !imgs;
+  renderGenCard();
 }
+function renderGenCard(){
+  const mode=cfg.mode, card=$('#genCard');
+  const status = mode==='service' ? el('div',{class:'status ok'},'Ready: built-in try-on')
+    : mode==='key' ? el('div',{class:'status ok'},'Ready: using your Gemini key')
+    : el('div',{class:'status'},'Not set up on this device');
+  const desc = mode==='service' ? 'Looks are generated inside the app. Each new try-on costs about 4¢, and every result is saved, so you only pay once per outfit.'
+    : mode==='key' ? 'Looks are generated with your own Gemini API key, about 4¢ each. Your key stays on this device.'
+    : 'Add a Gemini API key below to generate looks in the app (about 4¢ each). Without one, you can still copy the outfit image and paste it into Gemini.';
+  const f=(id,ph,val,type='text')=>el('input',{class:'field',id,placeholder:ph,value:val,type,autocomplete:'off',autocapitalize:'off',spellcheck:'false'});
+  const hasService=!!cfg.endpoint;
+  const choose = hasService && cfg.key ? [el('label',{class:'lbl'},'Generate with'), seg([['service','Built-in'],['key','My key']], mode==='key'?'key':'service', v=>{ LS.set('op_gen',v); renderGenCard(); }, 'full'), el('div',{style:'height:12px'})] : [];
+  card.replaceChildren(...[
+    el('h2',{},'Try-on'), status, el('p',{},desc),
+    hasService ? [el('label',{class:'lbl',for:'codeInput'},'Access code (if you were given one)'), f('codeInput','Access code',cfg.code,'password')] : null,
+    el('details',{open:!mode||null},
+      el('summary',{},'Advanced'),
+      choose,
+      el('label',{class:'lbl',for:'keyInput'},'Your Gemini API key'),
+      f('keyInput','AIza…',cfg.key,'password'),
+      el('p',{style:'font-size:13px;margin:0 2px 12px'},'Get one at ', el('a',{href:'https://aistudio.google.com/apikey',target:'_blank',rel:'noopener'},'Google AI Studio'), '. Image generation needs billing turned on.'),
+      el('label',{class:'lbl',for:'modelInput'},'Model'),
+      f('modelInput','gemini-2.5-flash-image',LS.get('op_model')),
+      el('label',{class:'lbl',for:'endpointInput'},'Try-on service URL'),
+      f('endpointInput',BUILTIN_ENDPOINT||'https://…workers.dev',LS.get('op_endpoint'),'url')),
+    B('Save', ()=>{
+      if($('#codeInput')) LS.set('op_code',$('#codeInput').value.trim());
+      LS.set('op_key',$('#keyInput').value.trim()); LS.set('op_model',$('#modelInput').value.trim()); LS.set('op_endpoint',$('#endpointInput').value.trim());
+      renderGenCard(); toast('Saved');
+    }, 'primary block')].flat().filter(Boolean));
+}
+$('#btnMePhoto').onclick = () => $('#meInput').click();
+$('#btnMeRemove').onclick = async () => {
+  if(!await ask('Remove your photo?','Try-on photos you already made are kept.','Remove')) return;
+  me=null; await del('meta','me'); collageCache=null; renderAll();
+};
 $('#meInput').addEventListener('change', async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
-  me = await shrink(f, 1400, 0.92); await put('meta', me, 'me'); collage={key:null,file:null,building:null}; renderMe(); updateStage();
-  if(looks.size && await ask('New photo saved','Your saved looks were made with your old photo. Delete them so they get regenerated with the new one?','Delete old looks')){
-    for(const k of [...looks.keys()]) await del('looks',k); looks.clear(); renderAll();
-  } else toast('Photo saved');
+  try{ me=await shrink(f,1400,.92); await put('meta',me,'me'); }catch(err){ return toast(err.message); }
+  collageCache=null; renderAll();
+  const imgs=[...looks.values()].filter(l=>l.image).length;
+  if(imgs && await ask('Photo saved','Your try-on photos were made with your old photo. Delete them so you can make new ones?','Delete try-ons')) clearTryOns();
+  else toast('Photo saved');
 });
-$('#keyInput').value = apiKey(); $('#modelInput').value = LS.get('op_model');
-$('#btnSaveKey').onclick = () => {
-  LS.set('op_key', $('#keyInput').value.trim()); LS.set('op_model', $('#modelInput').value.trim());
-  toast(apiKey() ? 'Saved' : 'Key cleared');
-  renderWardrobe();
-};
+async function clearTryOns(){
+  for(const l of looks.values()) if(l.image){ l.image=null; await put('looks',l); }
+  renderAll(); toast('Try-on photos deleted');
+}
 $('#btnClearLooks').onclick = async () => {
-  if(!looks.size) return toast('No looks to delete');
-  if(!await ask('Delete all looks?',`This removes ${looks.size} generated outfit image(s). Your wardrobe stays.`)) return;
-  for(const k of [...looks.keys()]) await del('looks',k); looks.clear(); renderAll();
+  const n=[...looks.values()].filter(l=>l.image).length; if(!n) return;
+  if(await ask('Delete all try-on photos?',`This deletes ${plural(n,'try-on photo')}. Your wardrobe and saved outfits stay.`)) clearTryOns();
 };
 
 /* ---------- nav ---------- */
 function switchView(v){
-  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on', s.id==='view-'+v));
-  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
+  closeSheet();
+  $$('.view').forEach(s=>s.classList.toggle('on', s.id==='view-'+v));
+  $$('#tabs button').forEach(b=>{ b.classList.toggle('on', b.dataset.v===v); b.setAttribute('aria-current', b.dataset.v===v?'page':'false'); });
   window.scrollTo(0,0);
-  if(v==='outfit') buildRows();
 }
-document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>switchView(b.dataset.v));
-window.addEventListener('resize', ()=>{ if($('#view-outfit').classList.contains('on')) positionRows(); });
+$$('#tabs button').forEach(b=>b.onclick=()=>switchView(b.dataset.v));
 
-function renderAll(){ collage={key:null,file:null,building:null}; if($('#view-outfit').classList.contains('on')) buildRows(); renderWardrobe(); renderLooks(); renderMe(); }
+function renderItemsOnly(){ renderTray(); renderBoard($('#board'), outfit); renderWardrobe(); renderLooks(); }
+function renderAll(){ renderOutfit(); renderWardrobe(); renderLooks(); renderMe(); }
 
 /* ---------- boot ---------- */
 (async()=>{
   try{
-    db = await openDB();
-    items = (await getAll('items')) || [];
-    (await getAll('looks') || []).forEach(l=>looks.set(l.key,l));
-    me = (await get('meta','me')) || null;
-    if(navigator.storage?.persist) navigator.storage.persist().catch(()=>{});
-    // resume interrupted cleanups
+    db=await openDB();
+    items=(await getAll('items'))||[];
+    for(const it of items) if(!CAT[it.cat]) it.cat='top';
+    for(const l of (await getAll('looks'))||[]){
+      if(Array.isArray(l.items)){ looks.set(l.key,l); continue; }
+      // migrate v1 looks (top|bottom|shoes)
+      const ids=[l.top,l.bottom,l.shoes].filter(Boolean), nl={key:lookKey(ids), items:ids, image:l.image||null, created:l.created||Date.now(), saved:true};
+      if(!nl.key) continue;
+      if(nl.key!==l.key) await del('looks',l.key);
+      await put('looks',nl); looks.set(nl.key,nl);
+    }
+    me=(await get('meta','me'))||null;
+    navigator.storage?.persist?.().catch(()=>{});
     items.filter(i=>i.status==='work'||i.status==='raw'||(i.status==='err'&&!i.product)).forEach(i=>queueCleanup(i.id));
-  }catch(e){
-    toast('Storage is not available in this browser, so nothing will be saved.', 5000);
-  }
+  }catch(e){ toast('Storage isn’t available in this browser, so nothing will be saved.', 5000); }
+  outfit=enforce(outfit);
+  if(!outfit.length && !LS.get('op_outfit')) outfit=enforce(['top','bottom','shoes'].map(c=>byCat(c)[0]?.id).filter(Boolean));
+  if(looks.get(curKey())?.image) stageMode='me';
+  if(!byCat(trayCat).length){ const c=CATS.find(c=>byCat(c.id).length); if(c) trayCat=c.id; }
   renderAll();
 })();
 })();

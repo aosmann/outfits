@@ -1,0 +1,16 @@
+name = "outfits-tryon"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://aosmann.github.io"
+MODEL = "gemini-2.5-flash-image"
+
+# Optional per-IP rate limit (10 try-ons per minute per IP). Protects your Gemini bill
+# if the URL leaks. Uncomment to enable.
+# [[ratelimits]]
+# name = "LIMITER"
+# namespace_id = "1001"
+#   [ratelimits.simple]
+#   limit = 10
+#   period = 60
