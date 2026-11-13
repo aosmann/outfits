@@ -1501,8 +1501,10 @@ async function syncNow(){
         versions:v, vdel:l.vdel||[], pickCreated:lv[pickOf(l)]?.created||null};
     }
     for(const [k,t] of Object.entries(tomb.looks)) if(!looks.has(k) && t>tsOf(remote.looks[k])) ch.looks[k]={key:k, deleted:true, updated:t};
-    const meT=+LS.get('op_me_t','0');
-    if(meT>tsOf(remote.me)) ch.me = me ? {h:await blob(me), meId, updated:meT} : {deleted:true, updated:meT};
+    // A photo saved before sync existed has no change time; treat it as oldest so it uploads
+    // unless another device already uploaded one.
+    const meT = +LS.get('op_me_t','0') || (me ? 1 : 0);
+    if(meT && meT>tsOf(remote.me)) ch.me = me ? {h:await blob(me), meId, updated:meT} : {deleted:true, updated:meT};
     const rs=new Set((remote.spend||[]).map(x=>x.t)), newSpend=spendLog().filter(x=>!rs.has(x.t));
     if(newSpend.length) ch.spend=newSpend;
 
